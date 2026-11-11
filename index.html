@@ -2413,12 +2413,15 @@ function renderCmp(M,cs){if(!M.rows.length){$("#pCmp").innerHTML='<div class="mu
 let calcT=0,lateT=0;
 function compute(){clearTimeout(calcT);calcT=setTimeout(computeNow,250);}
 function computeNow(){if(C.get().mode!=="plate")return;const M=model();
-  if(!(M.t>0)||!M.mat){renderStk(M);["#pOut","#pOutBot","#pPlanBox"].forEach(k=>{const e=$(k);if(e)e.innerHTML="";});try{$("#pPats").innerHTML=emptyPats(M,"재질·두께를 고르고 제품을 넣으면 배열도 표시");}catch(e){$("#pPats").innerHTML="";}const pc=$("#pCmp");if(pc)pc.innerHTML='<div class="pnote">원자재 재질과 두께(mm)를 입력하면 원판별로 비교함.</div>';PICK=null;return;}
+  if(!(M.t>0)||!M.mat){renderStk(M);["#pOutBot","#pPlanBox"].forEach(k=>{const e=$(k);if(e)e.innerHTML="";});$("#pOut").innerHTML=emptyStats();try{$("#pPats").innerHTML=emptyPats(M,"재질·두께를 고르고 제품을 넣으면 배열도 표시");}catch(e){$("#pPats").innerHTML="";}const pc=$("#pCmp");if(pc)pc.innerHTML='<div class="pnote">원자재 재질과 두께(mm)를 입력하면 원판별로 비교함.</div>';PICK=null;return;}
   if(M.rows.reduce((a,r)=>a+r.q,0)>30000){$("#pCmp").innerHTML='<div class="pwarn">제품 수량 합계가 30,000개를 넘어 계산하지 않음. 수량을 나눠서 넣어 주세요.</div>';$("#pOut").innerHTML="";$("#pPlanBox").innerHTML="";PICK=null;return;}
   const cs=M.rows.length?candidates(M):[];
   let pk=cs.find(c=>c.key===M.p.pick)||cs.find(c=>c.best)||cs.find(c=>c.n)||null;
   PICK=pk?Object.assign({},pk):null;
   renderCmp(M,cs);renderOut(M,pk);renderCfg();renderStk(M);if(PD.open)drawPD();}
+/* v77 : 초기화·제품 없음 때도 카드 8개를 빈 값(-)으로 */
+function emptyStats(){const D='<div class="v">-</div>',S2='<div class="s">- <small>원</small></div>';
+  return `<div class="pstats"><div class="pstat"><div class="k">필요 원판</div>${D}</div><div class="pstat"><div class="k">원판 1장 무게</div>${D}${S2}</div><div class="pstat"><div class="k">원자재 소요</div>${D}${S2}</div><div class="pstat"><div class="k">제품 순중량</div>${D}${S2}</div><div class="pstat"><div class="k">수율</div>${D}</div><div class="pstat"><div class="k">스크랩</div>${D}${S2}</div><div class="pstat"><div class="k">마지막 장 사용률</div>${D}</div><div class="pstat"><div class="k">원자재 금액</div>${D}</div></div>`;}
 /* v76 : 빈 배열도 — 고른 원판(없으면 첫 원판 후보, 그것도 없으면 4×8)을 빈 그림으로 */
 function emptyPats(M,msg){const p=M.p,pk=String(p.pick||"").split("x").map(Number);let W=1219,Lh=2438,nm="4×8";
   const sh=(pk.length===2&&pk[0]>0&&pk[1]>0)?(p.sheets.find(x=>+x[0]===pk[0]&&+x[1]===pk[1])||[pk[0],pk[1],""]):(p.sheets[0]||null);
@@ -2429,7 +2432,7 @@ function renderOut(M,pk){
     /* v40 : 제품이 없어도 원판 후보를 누르면 빈 원판 그림을 보여 줌 */
     if(pkS.length===2&&pkS[0]>0&&pkS[1]>0){const sh=M.p.sheets.find(x=>+x[0]===pkS[0]&&+x[1]===pkS[1]),c0={W:pkS[0],L:pkS[1]},nm=sh?sh[2]:"";
       $("#pPats").innerHTML=`<h4>배열도 <span class="muted">${M.rows.length?"이 원판에 들어가는 제품이 없음":"오른쪽 제품 목록에 폭·길이·수량을 넣으면 이 원판에 배열함"}</span></h4><div class="ppats"><div class="ppat" style="cursor:default"><div class="ph"><b>${szLab(nm,c0.W,c0.L)}</b><span class="muted">${esc(M.mat)} ${M.t}t · 1장 ${F(kgOf(M,c0.W,c0.L,1),2)} kg · 사용 영역 ${F(c0.W-2*M.m)}×${F(c0.L-2*M.m)}</span></div>${svgSheet(M,c0,[])}</div></div>`;}
-    else $("#pPats").innerHTML=M.rows.length?"":emptyPats(M,"원판 후보를 누르면 그 원판, 제품 목록에 폭·길이·수량을 넣으면 배열도 표시");$("#pOutBot").innerHTML="";$("#pOut").innerHTML=M.rows.length?'<div class="pwarn">원판 후보 중에 제품이 들어가는 원판이 없음. 원판 후보를 추가하거나 회전 허용을 켜 보세요.</div>':"";return;}
+    else $("#pPats").innerHTML=M.rows.length?"":emptyPats(M,"원판 후보를 누르면 그 원판, 제품 목록에 폭·길이·수량을 넣으면 배열도 표시");$("#pOutBot").innerHTML="";$("#pOut").innerHTML=emptyStats()+(M.rows.length?'<div class="pwarn">원판 후보 중에 제품이 들어가는 원판이 없음. 원판 후보를 추가하거나 회전 허용을 켜 보세요.</div>':"");return;}
   const plans={1:calc(M,pk.W,pk.L,1),2:calc(M,pk.W,pk.L,2)};
   const draw=(r3)=>{if(r3)plans[3]=r3;
     const avail=[1,2,3].filter(k=>plans[k]);
@@ -2871,7 +2874,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v76';
+var COIL_VER='v77';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
