@@ -352,6 +352,8 @@ button:disabled{opacity:.45;cursor:default;pointer-events:none}
 .svform{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel,transparent)}
 .svform input{flex:1 1 220px;min-width:0;padding:6px 8px}
 .svtabs{display:flex;gap:6px;margin:14px 0 8px;align-items:center;flex-wrap:wrap}
+.svform button:disabled,.svform input:disabled{opacity:.4;cursor:not-allowed}
+.svdel{color:var(--bad)!important;border-color:color-mix(in srgb,var(--bad) 45%,var(--line))!important}
 .svkinds{display:flex;gap:6px;margin:12px 0 0;align-items:center;flex-wrap:wrap}.svkinds button.on{background:var(--accent);color:#fff;border-color:var(--accent)!important;font-weight:700}
 .svtabs button.on{background:var(--accent-soft)!important;color:var(--accent);border-color:var(--accent)!important;font-weight:700}
 .svtabs input{margin-left:auto;padding:4px 8px;width:160px}
@@ -2881,7 +2883,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v81';
+var COIL_VER='v82';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
@@ -3221,8 +3223,13 @@ const coilShared=(function(){
     if(e.kind==='plate')window.__plate.load(d,lb); else window.__coil.loadCoil(d,lb);
     cur[e.kind]=id; persist(); close(); window.__coil.msg(`«${e.name}» 을(를) 불러옴. (↶ 취소로 되돌리기)`);
   }
-  function setArch(id,a){const e=view()[id];if(!e)return;op(id,Object.assign({},e,{arch:a?1:0,upd:now(),updBy:AU.name||AU.id}));
-    window.__coil.msg(`«${e.name}» 을(를) ${a?'보관함으로 옮김':'저장 목록으로 꺼냄'}.`);}
+  function setArch(id,a){const e=view()[id];if(!e)return;
+    if(!a){   /* v82 : 꺼내기 = 저장 목록에 복사본을 만들고 보관함 것은 그대로 둠 */
+      const t=now(), nid='sv'+t.toString(36)+Math.random().toString(36).slice(2,6);
+      op(nid,Object.assign({},e,{id:nid,arch:0,byId:AU.id,by:AU.name||AU.id,at:t,upd:t,updBy:AU.name||AU.id,from:id}));
+      ui.tab='list';render();window.__coil.msg(`«${e.name}» 을(를) 저장 목록으로 꺼냄 (보관함에도 그대로 있음).`);return;}
+    op(id,Object.assign({},e,{arch:1,upd:now(),updBy:AU.name||AU.id}));
+    window.__coil.msg(`«${e.name}» 을(를) 보관함으로 옮김.`);}
   function rename(id){const e=view()[id];if(!e)return;const n=prompt('새 이름',e.name);if(n==null||!n.trim()||n.trim()===e.name)return;
     op(id,Object.assign({},e,{name:n.trim(),upd:now(),updBy:AU.name||AU.id}));}
   function del(id){const e=view()[id];if(!e)return;
@@ -3280,6 +3287,7 @@ const coilShared=(function(){
     const L=all.filter(e=>!e.arch), A=all.filter(e=>e.arch);
     $('svN1').textContent=L.length; $('svN2').textContent=A.length;
     document.querySelectorAll('[data-svtab]').forEach(b=>b.classList.toggle('on',b.dataset.svtab===ui.tab));
+    {const ar=ui.tab==='arch';['svSave','svSaveArch','svName'].forEach(k=>{const el=$(k);el.disabled=ar;el.title=ar?'보관함 보기에서는 저장 안 됨 — «저장 목록» 탭에서 저장':'';});}   /* v82 */
     const q=ui.q.toLowerCase();
     const rows=(ui.tab==='arch'?A:L).filter(e=>!q||(e.name+' '+e.by).toLowerCase().includes(q)).sort((a,b)=>(+b.upd||0)-(+a.upd||0));
     if(!rows.length){$('svList').innerHTML=`<div class="svempty">${ui.tab==='arch'?'보관함이 비어 있음.':'저장한 '+KN+' 조합이 없음.'}${q?' (찾는 말에 맞는 것이 없음)':''}</div>`;return;}
@@ -3288,8 +3296,8 @@ const coilShared=(function(){
       return `<div class="svit${cur[kind]===e.id?' cur':''}" data-id="${esc(e.id)}"><div class="nm">${esc(e.name)}${cur[kind]===e.id?' <small class="muted">· 지금 불러온 것</small>':''}${p?'<span class="pend">⏳ 서버 올리는 중</span>':''}</div>
         <div class="acts"><button class="sm pri" data-a="load">불러오기</button>
           ${m?'<button class="sm" data-a="ow" title="지금 화면 내용으로 덮어쓰기">덮어쓰기</button>':''}
-          ${e.arch?'<button class="sm" data-a="unarch" title="저장 목록으로 꺼내기">꺼내기</button>':'<button class="sm" data-a="arch" title="보관함으로 옮기기">📦 보관</button>'}
-          ${m?'<button class="sm" data-a="ren">이름</button><button class="sm" data-a="del" title="삭제">🗑</button>':''}</div>
+          ${e.arch?'<button class="sm" data-a="unarch" title="저장 목록에 복사본을 만듦 (보관함 것은 그대로)">꺼내기</button>':'<button class="sm" data-a="arch" title="보관함으로 옮기기">📦 보관</button>'}
+          ${m?(e.arch?'<button class="sm" data-a="ren">이름</button><button class="sm svdel" data-a="del" title="보관함에서 삭제">🗑 삭제</button>':'<button class="sm" data-a="ren">이름</button><button class="sm" data-a="del" title="삭제">🗑</button>'):''}</div>
         <div class="meta">${esc(summary(kind,d))}<br>${esc(e.by||'')} · ${fmt(e.at)}${e.upd&&e.upd!==e.at?` · 고침 ${esc(e.updBy||'')} ${fmt(e.upd)}`:''}</div></div>`;}).join('');
   }
   document.addEventListener('click',e=>{const b=e.target.closest('.svb');if(!b)return;e.preventDefault();e.stopPropagation();open(b.dataset.sv);});
