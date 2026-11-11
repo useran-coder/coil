@@ -354,6 +354,14 @@ button:disabled{opacity:.45;cursor:default;pointer-events:none}
 .svtabs{display:flex;gap:6px;margin:14px 0 8px;align-items:center;flex-wrap:wrap}
 .svform button:disabled,.svform input:disabled{opacity:.4;cursor:not-allowed}
 .svdel{color:var(--bad)!important;border-color:color-mix(in srgb,var(--bad) 45%,var(--line))!important}
+.ucbox{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.97);opacity:0;pointer-events:none;z-index:1001;width:min(460px,calc(100vw - 32px));background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:0 18px 50px rgba(0,0,0,.35);transition:opacity .15s,transform .15s}
+.ucbox.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.uch{display:flex;align-items:center;gap:8px;font-size:16px}.uch .muted{font-size:12px}
+.ucsz{display:flex;gap:6px;margin:12px 0 8px}.ucsz .chip.on{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.ucg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.ucg label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}.ucg input{width:100%;font-size:15px;font-weight:700;text-align:right;padding:6px 8px}
+.ucg .ucp{grid-column:1/-1}.ucg .ucp input{font-size:18px}
+.ucr{margin:12px 0;padding:10px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--line);font-size:13px;line-height:1.7}.ucv{font-size:15px}.ucv b{font-size:20px;color:var(--accent)}
+.ucf{display:flex;justify-content:flex-end;gap:8px}
 .svkinds{display:flex;gap:6px;margin:12px 0 0;align-items:center;flex-wrap:wrap}.svkinds button.on{background:var(--accent);color:#fff;border-color:var(--accent)!important;font-weight:700}
 .svtabs button.on{background:var(--accent-soft)!important;color:var(--accent);border-color:var(--accent)!important;font-weight:700}
 .svtabs input{margin-left:auto;padding:4px 8px;width:160px}
@@ -716,7 +724,7 @@ html{scrollbar-gutter:stable}
     <div class="cg">
       <div class="cg-t">원자재 규격</div>
       <div class="cg-r">
-        <div class="cf"><span class="lblrow">재질 (강종)<button class="sm minib" id="pFromCoil" type="button" title="코일 화면에서 고른 재질·두께로 맞춤">코일 규격으로</button></span><select id="pMat" class="matsel strong" style="width:200px" aria-label="재질 (강종)"></select></div>
+        <div class="cf"><span class="lblrow">재질 (강종)<button class="sm minib" id="pUnitCalc" type="button" title="장당 구입 단가로 kg단가를 계산해 넣음">판재 단가산정</button></span><select id="pMat" class="matsel strong" style="width:200px" aria-label="재질 (강종)"></select></div>
         <label class="cf">두께 (mm)<input id="pT" class="strong" type="number" step="0.05" min="0.1" style="width:84px" placeholder="두께"></label>
         <div class="cf"><span class="lblrow"><button type="button" class="lblbtn" id="pPriceBtn" title="눌러서 이 재질의 원자재 단가현황 보기 (매입분석도구)">단가 (원/kg) <span class="lbtn-i">›</span></button><small id="pPriceSrc" class="psrc"></small></span><input id="pPrice" class="strong" type="number" min="0" step="10" style="width:110px" placeholder="단가 없음"></div>
       </div>
@@ -2165,7 +2173,7 @@ function plateList(mat,t){   /* v71 : 재질만 / 재질·두께 / 전체(mat=""
   const get=(g,tt,w,l)=>{const k=normMat(g)+"|"+t2(tt)+"|"+fw(w)+"x"+fw(l);if(!M.has(k))M.set(k,{mat:normMat(g),t:+tt,dens:density(g),w,l,n:0,sheets:0,kg:0,amt:0,last:"",vendors:new Map(),stockSh:0,stockKg:0,inStock:false,lastPrice:0});return M.get(k);};
   L.pur.forEach(r=>{const hay=[r.mid,r.name,r.spec,r.small,r.group].join(" ").toUpperCase();if(/COIL|코일/.test(hay))return;
     const d=plateTWL(r.spec)||plateTWL(r.name);if(!d)return;const g=gradeOf(r.small,r.mid,r.name,r.big,r.group,r.code);if(!ok(g,d.t))return;
-    const o=get(g,d.t,d.w,d.l),q=+r.qty||0,a=+r.supply||+r.total||0,shKg=d.t*d.w*d.l*o.dens/1e6,ea=isEA(r.unit);
+    const o=get(g,d.t,d.w,d.l),q=+r.qty||0,a=+r.supply||+r.total||0,shKg=d.t*d.w*d.l*o.dens/1e6,ea=isEA(r.unit)||(q>0&&a/q>15000&&shKg>0);
     o.n++;o.amt+=a;o.kg+=ea?q*shKg:q;o.sheets+=ea?q:q/shKg;
     if(String(r.d||"")>=o.last){o.last=String(r.d||"");const kq=ea?q*shKg:q;if(kq>0&&a>0)o.lastPrice=a/kq;}
     const v=r.vendor||"(미상)";o.vendors.set(v,(o.vendors.get(v)||0)+a);});
@@ -2195,7 +2203,7 @@ window.__coil={
       const hay=[r.mid,r.name,r.spec,r.small,r.group].join(" ").toUpperCase();let th=0,kg=0,kind="";
       const c=coilTW(r.spec);
       if(c&&(/COIL|코일/.test(hay)||!plateTWL(r.spec))){if(isEA(r.unit))return;th=c.t;kg=q;kind="코일";}
-      else{const d=plateTWL(r.spec)||plateTWL(r.name);if(!d)return;th=d.t;kg=isEA(r.unit)?q*d.t*d.w*d.l*dens/1e6:q;kind="판재";}
+      else{const d=plateTWL(r.spec)||plateTWL(r.name);if(!d)return;th=d.t;const shKg=d.t*d.w*d.l*dens/1e6;kg=isEA(r.unit)||(a/q>15000&&shKg>0)?q*shKg:q;kind="판재";}   /* v83 : 단위가 비어도 kg당 15,000원 넘으면 장 단위 매입으로 보고 장당 무게로 나눔 */
       if(!(kg>0))return;const v=a/kg;if(!(v>100&&v<100000))return;
       const o={v,d:String(r.d||""),vendor:r.vendor||"",t:th,kind,spec:r.spec||"",i};
       const newer=(x)=>!x||o.d>x.d||(o.d===x.d&&o.i>x.i);
@@ -2403,7 +2411,7 @@ function rowsHtml(){const M=model();return M.p.rows.map((r,i)=>{const w=num(r.w)
    (()=>{const tq=M.rows.reduce((a,r)=>a+r.q,0),tk=M.rows.reduce((a,r)=>a+kgOf(M,r.w,r.l,r.q),0);return M.rows.length?`<tr class="sum"><td></td><td class="l">합계 ${M.rows.length}품목</td><td></td><td></td><td>${F(tq)}</td><td></td><td class="kgsum">${F(tk,1)}</td><td></td></tr>`:"";})();}
 function renderRows(focus){$("#pRows").innerHTML=rowsHtml();if(focus){const el=document.querySelector(`#pRows tr[data-i="${focus.i}"] input[data-k="${focus.k}"]`);if(el){el.focus();try{el.select();}catch(e){}}}}
 function renderCfg(){const p=P();$("#pMat").value=p.mat;$("#pT").value=p.t;{const a=autoPrice(p.mat,p.t),pe=$("#pPrice"),man=num(p.price)>0;pe.value=man?p.price:(a?Math.round(a.v):"");pe.classList.toggle("auto",!man&&!!a);pe.title=man?"직접 입력한 단가 (지우면 마지막 입고 단가로 돌아감)":a?a.title:"이 재질의 입고 기록·단가표가 없음";
-  const ps=$("#pPriceSrc");if(ps)ps.textContent=man?"직접 입력":a?a.src:"입고 기록 없음";}$("#pM").value=p.m;$("#pGap").value=p.gap;$("#pRot").checked=!!+p.rot;$("#pCoil").checked=!!+p.coil;
+  const ps=$("#pPriceSrc"),pc=p.priceCalc;if(ps)ps.textContent=man?(pc&&pc.v===num(p.price)?`장당 ${F(pc.sheet)}원 산정`:"직접 입력"):a?a.src:"입고 기록 없음";if(man&&pc&&pc.v===num(p.price))pe.title=`판재 단가산정: ${F(pc.w)}×${F(pc.l)} ${pc.t}t 장당 ${F(pc.sheet)}원 → ${F(pc.v)}원/kg (지우면 마지막 입고 단가로 돌아감)`;}$("#pM").value=p.m;$("#pGap").value=p.gap;$("#pRot").checked=!!+p.rot;$("#pCoil").checked=!!+p.coil;
   document.querySelectorAll("#pProc .chip").forEach(b=>b.classList.toggle("on",+b.dataset.gap===num(p.gap)&&+b.dataset.m===num(p.m)));
   const cur=(PICK&&PICK.key)||p.pick||"";
   $("#pSheets").innerHTML=p.sheets.map((s,i)=>{const k=num(s[0])+"x"+num(s[1]),on=cur===k;return `<span class="pchip pick${on?" on":""}" data-spick="${k}" role="button" tabindex="0" title="눌러서 이 원판으로 배열">${on?"✓ ":""}${szLab(s[2],s[0],s[1])}<button type="button" data-sdel="${i}" title="원판 후보에서 빼기">×</button></span>`;}).join("")||'<span class="muted" style="font-size:12px">원판 후보가 없음</span>';
@@ -2668,7 +2676,32 @@ $("#pM").addEventListener("change",e=>setCfg("m",Math.max(0,num(e.target.value))
 $("#pGap").addEventListener("change",e=>setCfg("gap",Math.max(0,num(e.target.value)),"제품 간격 변경"));
 $("#pRot").addEventListener("change",e=>setCfg("rot",e.target.checked?1:0,"회전 허용 변경"));
 $("#pCoil").addEventListener("change",e=>setCfg("coil",e.target.checked?1:0,"코일 절단 비교 변경"));
-$("#pFromCoil").addEventListener("click",()=>{const S=C.get();snap("코일 규격으로");const p=P();p.mat=S.mat;p.t=S.t;save();renderCfg();renderRows();compute();C.msg(`코일 규격 ${S.mat} ${S.t}t 로 맞춤.`);});
+/* v83 : 판재 단가산정 — 규격(두께·폭·길이)과 장당 구입단가로 kg단가 계산 → 단가 칸에 적용 */
+function ucOpen(){const p=P();let el=$("#ucBox");
+  if(!el){document.body.insertAdjacentHTML("beforeend",`<div class="pscrim no-print" id="ucScrim"></div><div id="ucBox" class="ucbox no-print" role="dialog" aria-label="판재 단가산정">
+    <div class="uch"><b>판재 단가산정</b><span class="muted" id="ucMat"></span><button type="button" class="sm" id="ucX" style="margin-left:auto">✕</button></div>
+    <div class="ucsz"><button type="button" class="chip" data-uc="1219x2438">4×8</button><button type="button" class="chip" data-uc="1219x3048">4×10</button><button type="button" class="chip" data-uc="1524x3048">5×10</button></div>
+    <div class="ucg"><label>두께 (mm)<input id="ucT" class="strong" inputmode="decimal"></label><label>폭 (mm)<input id="ucW" class="strong" inputmode="numeric"></label><label>길이 (mm)<input id="ucL" class="strong" inputmode="numeric"></label>
+      <label class="ucp">장당 구입단가 (원)<input id="ucP" class="strong" inputmode="numeric" placeholder="예: 45,000"></label></div>
+    <div class="ucr" id="ucRes"></div>
+    <div class="ucf"><button type="button" class="sm" id="ucNo">취소</button><button type="button" class="sm pri" id="ucOk">kg단가에 적용</button></div></div>`);
+    el=$("#ucBox");
+    const calcUC=()=>{const t=num($("#ucT").value),w=num($("#ucW").value),l=num($("#ucL").value),pr=num($("#ucP").value),d=C.density(P().mat)||7.85,kg=t*w*l*d/1e6,v=kg>0&&pr>0?pr/kg:0;
+      document.querySelectorAll("#ucBox [data-uc]").forEach(b=>b.classList.toggle("on",b.dataset.uc===w+"x"+l));
+      $("#ucRes").innerHTML=kg>0?`<div>장당 무게 <b>${F(kg,2)} kg</b> <span class="muted">(${F(t,2)} × ${F(w)} × ${F(l)} × 비중 ${d})</span></div><div class="ucv">kg단가 <b>${v?F(Math.round(v)):"-"}</b> 원/kg</div>`:'<div class="muted">두께·폭·길이를 넣으면 장당 무게를 계산함</div>';
+      $("#ucOk").disabled=!(v>0);return {t,w,l,pr,kg,v};};
+    el.addEventListener("input",calcUC);
+    el.addEventListener("click",e=>{const b=e.target.closest("[data-uc]");if(b){const [w,l]=b.dataset.uc.split("x");$("#ucW").value=w;$("#ucL").value=l;calcUC();}});
+    const close=()=>{$("#ucBox").classList.remove("on");$("#ucScrim").classList.remove("on");};
+    $("#ucX").onclick=close;$("#ucNo").onclick=close;$("#ucScrim").onclick=close;
+    el.addEventListener("keydown",e=>{if(e.key==="Escape"){e.stopPropagation();close();}else if(e.key==="Enter"&&!$("#ucOk").disabled){e.preventDefault();$("#ucOk").click();}});
+    $("#ucOk").onclick=()=>{const r=calcUC();if(!(r.v>0))return;snap("판재 단가산정");const q=P();if(r.t>0)q.t=r.t;q.price=Math.round(r.v);q.priceCalc={t:r.t,w:r.w,l:r.l,sheet:r.pr,v:q.price};save();renderCfg();renderRows();compute();close();
+      C.msg(`판재 ${F(r.w)}×${F(r.l)} 장당 ${F(r.pr)}원 → ${F(q.price)}원/kg 적용. (↶ 취소로 되돌리기)`);};
+    el._calc=calcUC;}
+  const pc=p.priceCalc||{};$("#ucMat").textContent=`${p.mat||"재질 미선택"} · 비중 ${C.density(p.mat)||7.85}`;
+  $("#ucT").value=num(p.t)>0?p.t:(pc.t||"");$("#ucW").value=pc.w||1219;$("#ucL").value=pc.l||2438;$("#ucP").value=pc.sheet&&pc.v===num(p.price)?pc.sheet:"";
+  el._calc();el.classList.add("on");$("#ucScrim").classList.add("on");setTimeout(()=>$("#ucP").focus(),60);}
+$("#pUnitCalc").addEventListener("click",ucOpen);
 $("#pProc").addEventListener("click",e=>{const b=e.target.closest("[data-gap]");if(!b)return;snap("가공 방식 변경");const p=P();p.gap=+b.dataset.gap;p.m=+b.dataset.m;p.plan=b.textContent.trim()==="전단"?2:0;save();renderCfg();compute();});   /* v80 : 전단 → 2안 띠 배열(전단기용) 선택, 레이저·NCT → 추천(★)안 */
 function pickSheet(k){const p=P();p.pick=k;p.plan=0;save();computeNow();const W=k.split("x");C.msg(`원판 ${F(W[0])}×${F(W[1])} 로 배열함.`);}
 $("#pSheets").addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.dataset.spick){e.preventDefault();pickSheet(e.target.dataset.spick);}});
@@ -2883,7 +2916,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v82';
+var COIL_VER='v83';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
