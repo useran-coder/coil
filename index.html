@@ -1380,7 +1380,7 @@ function searchTokens(){
 function visibleItems(){
   if(!IDX)return [];
   let a=[...IDX.items.values()];
-  if(!S.showAll&&S.mat&&S.t>0){const sk=specKey(S.mat,S.t);a=a.filter(it=>specKey(it.mat,it.t)===sk);}
+  if(!S.showAll){if(S.mat&&S.t>0){const sk=specKey(S.mat,S.t);a=a.filter(it=>specKey(it.mat,it.t)===sk);}else if(S.mat){const m=normMat(S.mat);a=a.filter(it=>normMat(it.mat)===m);}else a=[];}   /* v70 : 재질·두께를 고른 만큼만 보여 줌 (초기화 뒤엔 빈 목록) */
   const qs=searchTokens(); if(qs.length)a=a.filter(it=>qs.every(f=>f(it)));
   const base=(x,y)=>specKey(x.mat,x.t).localeCompare(specKey(y.mat,y.t))||y.w-x.w;
   const so=S.sort; if(!so||!so.k)return a.sort(base);
@@ -1406,7 +1406,7 @@ function renderSortHead(){
 }
 let openKey=null;
 function renderInv(){
-  $("#listSpec").textContent=S.showAll?"전체 강종":(S.mat&&S.t>0?`${normMat(S.mat)} ${tl(S.t)}t`:"재질·두께 미입력");
+  $("#listSpec").textContent=S.showAll?"전체 강종":(S.mat&&S.t>0?`${normMat(S.mat)} ${tl(S.t)}t`:S.mat?`${normMat(S.mat)} · 두께 미입력`:"재질·두께 미입력");
   renderSortHead();
   const cm=colorMap(), rows=visibleItems();
   $("#qCnt").textContent=Q.trim()?`${rows.length}건`:"";
@@ -1416,9 +1416,10 @@ function renderInv(){
   }
   if(!rows.length){
     const none=!(L.pur.length||L.invYm);
+    if(!none&&!S.showAll&&!S.mat){$("#inv").innerHTML=`<tr><td colspan="10"><div class="empty">위 <b>원자재 규격</b>에서 재질과 두께를 고르면 그 코일의 재고·주문 폭 목록이 나옵니다. 모든 코일을 보려면 ‘전체 강종·두께’를 켜세요.</div></td></tr>`;return;}
     $("#inv").innerHTML=`<tr><td colspan="10"><div class="empty">${none?
       "연동된 매입/재고 데이터가 없습니다. 같은 브라우저에서 <b>매입분석도구</b>(와 영업분석도구)를 열어 데이터를 불러온 뒤 상단 <b>↻ 다시 불러오기</b>를 누르거나, <b>엑셀 불러오기</b>로 ERP 매입·매출 파일을 여세요. 아래 ‘직접 추가’로 수동 입력도 가능합니다.":
-      `${esc(normMat(S.mat))} ${esc(tl(S.t))}t 코일의 매입·재고 기록이 없습니다. 재질·두께를 확인하거나 ‘전체 재질·두께 보기’를 켜세요.`}</div></td></tr>`;
+      `${esc(normMat(S.mat))}${S.t>0?' '+esc(tl(S.t))+'t':''} 코일의 매입·재고 기록이 없습니다. 재질·두께를 확인하거나 ‘전체 재질·두께 보기’를 켜세요.`}</div></td></tr>`;
     return;
   }
   $("#inv").innerHTML=rows.map(it=>{
@@ -2821,7 +2822,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v69';
+var COIL_VER='v70';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
