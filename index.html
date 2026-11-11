@@ -2666,7 +2666,7 @@ $("#pGap").addEventListener("change",e=>setCfg("gap",Math.max(0,num(e.target.val
 $("#pRot").addEventListener("change",e=>setCfg("rot",e.target.checked?1:0,"회전 허용 변경"));
 $("#pCoil").addEventListener("change",e=>setCfg("coil",e.target.checked?1:0,"코일 절단 비교 변경"));
 $("#pFromCoil").addEventListener("click",()=>{const S=C.get();snap("코일 규격으로");const p=P();p.mat=S.mat;p.t=S.t;save();renderCfg();renderRows();compute();C.msg(`코일 규격 ${S.mat} ${S.t}t 로 맞춤.`);});
-$("#pProc").addEventListener("click",e=>{const b=e.target.closest("[data-gap]");if(!b)return;snap("가공 방식 변경");const p=P();p.gap=+b.dataset.gap;p.m=+b.dataset.m;save();renderCfg();compute();});
+$("#pProc").addEventListener("click",e=>{const b=e.target.closest("[data-gap]");if(!b)return;snap("가공 방식 변경");const p=P();p.gap=+b.dataset.gap;p.m=+b.dataset.m;p.plan=b.textContent.trim()==="전단"?2:0;save();renderCfg();compute();});   /* v80 : 전단 → 2안 띠 배열(전단기용) 선택, 레이저·NCT → 추천(★)안 */
 function pickSheet(k){const p=P();p.pick=k;p.plan=0;save();computeNow();const W=k.split("x");C.msg(`원판 ${F(W[0])}×${F(W[1])} 로 배열함.`);}
 $("#pSheets").addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.dataset.spick){e.preventDefault();pickSheet(e.target.dataset.spick);}});
 $("#pSheets").addEventListener("click",e=>{const b=e.target.closest("[data-sdel]");if(!b){const c=e.target.closest("[data-spick]");if(c)pickSheet(c.dataset.spick);return;}const p=P(),s=p.sheets[+b.dataset.sdel];if(!s)return;
@@ -2880,7 +2880,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v79';
+var COIL_VER='v80';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
