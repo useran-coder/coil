@@ -1986,7 +1986,7 @@ window.__coil={
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v24';
+var COIL_VER='v25';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
@@ -2246,6 +2246,19 @@ function bootWaitLink(){
 .dbfm-dr a.cur{background:#eff6ff;color:#1d4ed8;font-weight:600}
 .dbfm-dr a.cur::after{content:"현재";margin-left:auto;font-size:11px;font-weight:600;color:#2563eb;background:#dbeafe;border-radius:999px;padding:2px 8px}
 .dbfm-sep{height:1px;background:#eef2f6;margin:8px 20px}
+/* v25 : 메뉴 버튼·메뉴 창을 화면 바탕색(밝게/어둡게)에 맞추고 버튼을 제목줄 높이에 맞게 작게 */
+.dbfm-btn{width:30px;height:30px;top:12px;left:14px;border-radius:7px;background:var(--panel);border-color:var(--line);color:var(--ink);box-shadow:none}
+.dbfm-btn:hover{background:var(--bg);border-color:var(--muted)}
+.dbfm-btn svg{width:17px;height:17px}
+.dbfm-dr{background:var(--panel);color:var(--ink);border-right-color:var(--line)}
+.dbfm-hd,.dbfm-sep{border-color:var(--line)}
+.dbfm-sep{background:var(--line)}
+.dbfm-lb,.dbfm-x{color:var(--muted)}
+.dbfm-x:hover{background:var(--bg);color:var(--ink)}
+.dbfm-dr a{color:var(--ink)}
+.dbfm-dr a:hover{background:var(--bg)}
+.dbfm-dr a.cur{background:var(--accent-soft,rgba(59,130,246,.14));color:var(--accent,#3b82f6)}
+.dbfm-dr a.cur::after{background:transparent;border:1px solid currentColor;color:inherit}
 @media print{.dbfm-btn,.dbfm-scrim,.dbfm-dr{display:none!important}}
 </style>
 <script id="dbf-menu-v1" data-cur="coil" data-sel="header.top">
@@ -2308,6 +2321,7 @@ function bootWaitLink(){
       document.body.appendChild(btn);
     }
     if(!host || !host.isConnected || roomFor!==host){ room(); roomFor=host; }
+    try{ var hh=document.querySelector('header.top h1')||document.querySelector('header.top'); if(hh){ var r=hh.getBoundingClientRect(); if(r.height>0&&r.height<120) btn.style.top=Math.max(4,Math.round(r.top+(r.height-30)/2))+'px'; } }catch(_){}
     return true;
   }
   function start(){
