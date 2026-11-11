@@ -34,7 +34,7 @@ header.top h1{font-size:18px;margin:0;font-weight:700}
 .linkbar{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);margin-right:4px}
 .dot.on{background:var(--ok)} .dot.off{background:var(--warn)}
-.wrap{max-width:1440px;margin:0 auto;padding:16px}
+.wrap{max-width:1560px;margin:0 auto;padding:16px}   /* v55 : 1440→1560 — 코일 화면 원자재 규격·코일 폭·슬리팅 조건 3칸이 한 줄에 들어가게 */
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
 .panel h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
 .panel h2 .num{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px}
@@ -86,6 +86,8 @@ button.chip.on{background:var(--accent-soft);border-color:var(--accent);color:va
 .ib-btn{padding:0 12px;font-size:12.5px;white-space:nowrap}
 /* 상단 설정 그룹 */
 .cfg{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+/* v55 : 코일 화면 3칸(원자재 규격·코일 폭·슬리팅 조건)은 넓은 화면에서 한 줄 — 모자라면 코일 폭 칸의 빠른 선택 칩이 줄바꿈 */
+@media (min-width:1280px){#coilCfg{flex-wrap:nowrap}#coilCfg>.cg{flex:0 0 auto}#coilCfg>.cg.cw{flex:0 1 auto;min-width:0}#coilCfg>.cg.cw .cg-r{flex-wrap:nowrap;align-items:flex-start}#coilCfg>.cg.cw .cf:first-child{flex:none}#coilCfg>.cg.cw .cf{min-width:0}#coilCfg>.cg.cw .cf:last-child{flex:1 1 auto}}
 .cg{border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:8px 12px 10px}
 .cg-t{font-size:11.5px;font-weight:700;color:var(--accent);margin-bottom:6px;letter-spacing:.02em}
 .cg-r{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
@@ -635,7 +637,7 @@ body:not(.mode-plate) .plate-only{display:none!important}
   <!-- 1. 코일 그림 -->
   <section class="panel no-print coil-only" id="coilSection">
     <h2><span class="num">1</span>코일(원판) 슬리팅 배열<button type="button" class="sm svb" data-sv="coil" title="지금 코일 조합을 이름 붙여 저장 · 저장 목록/보관함 보기 (모든 사용자와 공유)">💾 저장 · 목록</button><button type="button" class="sm resetb" id="coilReset" title="주문 폭·수량·조합·직접 배열 코일을 모두 비웁니다 (↶ 취소로 되돌리기)">⟲ 초기화</button></h2>
-    <div class="cfg">
+    <div class="cfg" id="coilCfg">
       <div class="cg">
         <div class="cg-t">원자재 규격</div>
         <div class="cg-r">
@@ -644,7 +646,7 @@ body:not(.mode-plate) .plate-only{display:none!important}
           <div class="cf"><span class="lblrow"><button type="button" class="lblbtn" id="cPriceBtn" title="눌러서 이 재질의 원자재 단가현황 보기 (매입분석도구)">단가 (원/kg) <span class="lbtn-i">›</span></button><small id="cPriceSrc" class="psrc"></small></span><input id="cPrice" type="number" min="0" step="10" style="width:96px" placeholder="단가 없음"></div>
         </div>
       </div>
-      <div class="cg">
+      <div class="cg cw">
         <div class="cg-t">코일 폭</div>
         <div class="cg-r">
           <label class="cf">폭 (mm)<input id="mw" class="strong big2" type="number" min="100" max="2500" step="1" style="width:100px"></label>
@@ -2804,7 +2806,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v54';
+var COIL_VER='v55';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
