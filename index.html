@@ -2458,13 +2458,14 @@ $("#pStk").addEventListener("click",e=>{const b=e.target.closest("[data-stk]");i
 const PD={open:false,i:0};
 function svgThumb(M,c,pl){const W=c.W,L=c.L,s=72/W,H=L*s;let g=`<svg viewBox="0 0 72 ${H.toFixed(1)}" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="72" height="${H.toFixed(1)}" class="psvg-sheet"/>`;
   pl.forEach(p=>{const r=M.rows[p.it.ri];g+=`<rect x="${((M.m+p.x)*s).toFixed(2)}" y="${((M.m+p.y)*s).toFixed(2)}" width="${Math.max(.4,(p.w-M.gap)*s).toFixed(2)}" height="${Math.max(.4,(p.h-M.gap)*s).toFixed(2)}" fill="${colOf(r.ri)}" fill-opacity=".85"/>`;});return g+"</svg>";}
-function svgDetail(M,c,pl){const W=c.W,L=c.L,m=M.m,g=M.gap,s=Math.min(460/W,560/L),ox=86,oy=60,SW=W*s,SH=L*s,VW=ox+SW+44,VH=oy+SH+50;
+function svgDetail(M,c,pl){const W=c.W,L=c.L,m=M.m,g=M.gap,s=Math.min(460/W,560/L),ox=86,oy=72,SW=W*s,SH=L*s,VW=ox+SW+52,VH=oy+SH+52,D1=30,D2=56;   /* v50 : 4면 치수선 간격 통일 — 철판에서 첫 줄 30, 둘째 줄 56 */
   const X=v=>(ox+v*s).toFixed(1),Y=v=>(oy+v*s).toFixed(1);
   const PZ=Math.max(.7,Math.min(1.25,(Math.max(420,(window.innerHeight||900)-280))/VH,((window.innerWidth||1400)*.55)/VW));
   let o=`<svg viewBox="0 0 ${VW.toFixed(0)} ${VH.toFixed(0)}" width="${(VW*PZ).toFixed(0)}" height="${(VH*PZ).toFixed(0)}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="배열도">`;
   const tick=(x,y,v)=>v?`<line x1="${x}" y1="${y-4}" x2="${x}" y2="${y+4}" class="pd-line"/>`:`<line x1="${x-4}" y1="${y}" x2="${x+4}" y2="${y}" class="pd-line"/>`;
-  const dimH=(a,b,y,txt,red)=>{const x1=+X(a),x2=+X(b);return `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" class="${red?"pd-redl":"pd-line"}"/>${tick(x1,y,1)}${tick(x2,y,1)}`+(txt?`<text x="${((x1+x2)/2).toFixed(1)}" y="${y-4}" text-anchor="middle" class="${red?"pd-red":"pd-dim"}">${txt}</text>`:"");};
-  const dimV=(a,b,x,txt,red,right)=>{const y1=+Y(a),y2=+Y(b),cy=((y1+y2)/2).toFixed(1);return `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" class="${red?"pd-redl":"pd-line"}"/>${tick(x,y1,0)}${tick(x,y2,0)}`+(txt?(right?`<text x="${x-9}" y="${cy}" text-anchor="middle" dominant-baseline="central" transform="rotate(-90 ${x-9} ${cy})" class="${red?"pd-red":"pd-dim"}">${txt}</text>`:`<text x="${x-5}" y="${cy}" text-anchor="middle" transform="rotate(-90 ${x-5} ${cy})" class="${red?"pd-red":"pd-dim"}">${txt}</text>`):"");};
+  /* out=1 : 구간이 좁아 글자가 안 들어가면 치수선 바깥쪽(아래/오른쪽)에 씀 */
+  const dimH=(a,b,y,txt,red,out)=>{const x1=+X(a),x2=+X(b),cls=red?"pd-red":"pd-dim";return `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" class="${red?"pd-redl":"pd-line"}"/>${tick(x1,y,1)}${tick(x2,y,1)}`+(txt?(out?`<text x="${x2.toFixed(1)}" y="${y+14}" text-anchor="end" class="${cls}">${txt}</text>`:`<text x="${((x1+x2)/2).toFixed(1)}" y="${y-4}" text-anchor="middle" class="${cls}">${txt}</text>`):"");};
+  const dimV=(a,b,x,txt,red,right,out)=>{const y1=+Y(a),y2=+Y(b),cy=((y1+y2)/2).toFixed(1),cls=red?"pd-red":"pd-dim";return `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" class="${red?"pd-redl":"pd-line"}"/>${tick(x,y1,0)}${tick(x,y2,0)}`+(txt?(out?`<text x="${x+10}" y="${y2.toFixed(1)}" text-anchor="start" dominant-baseline="central" transform="rotate(-90 ${x+10} ${y2.toFixed(1)})" class="${cls}">${txt}</text>`:right?`<text x="${x-9}" y="${cy}" text-anchor="middle" dominant-baseline="central" transform="rotate(-90 ${x-9} ${cy})" class="${cls}">${txt}</text>`:`<text x="${x-5}" y="${cy}" text-anchor="middle" transform="rotate(-90 ${x-5} ${cy})" class="${cls}">${txt}</text>`):"");};
   o+=`<rect x="${X(0)}" y="${Y(0)}" width="${SW.toFixed(1)}" height="${SH.toFixed(1)}" class="psvg-sheet"/>`;
   if(m>0)o+=`<rect x="${X(m)}" y="${Y(m)}" width="${((W-2*m)*s).toFixed(1)}" height="${((L-2*m)*s).toFixed(1)}" class="psvg-mar"/>`;
   pl.forEach(p=>{const r=M.rows[p.it.ri],pw=p.w-g,ph=p.h-g,x=m+p.x,y=m+p.y,col=colOf(r.ri);
@@ -2473,17 +2474,17 @@ function svgDetail(M,c,pl){const W=c.W,L=c.L,m=M.m,g=M.gap,s=Math.min(460/W,560/
     const bw=pw*s,bh=ph*s,vert=bh>bw*1.25,lab=`${r.ri+1}  ${F(r.w)}×${F(r.l)}${g?` (+${F(g)}/+${F(g)})`:""}${p.r?" ↻":""}`,len=vert?bh:bw,thick=vert?bw:bh,fs=Math.min(11,thick*.55,len/(lab.length*.56));
     const cx=(+X(x)+bw/2).toFixed(1),cy=(+Y(y)+bh/2).toFixed(1);
     if(fs>=5.5)o+=`<text x="${cx}" y="${cy}" font-size="${fs.toFixed(1)}" text-anchor="middle" dominant-baseline="central" fill="var(--ink)" font-weight="600"${vert?` transform="rotate(-90 ${cx} ${cy})"`:""}>${lab}</text>`;});
-  o+=dimH(0,W,oy-38,"원판 폭 "+F(W));if(m>0)o+=dimH(m,W-m,oy-18,"사용 폭 "+F(W-2*m));
-  o+=dimV(0,L,ox-56,"원판 길이 "+F(L));if(m>0)o+=dimV(m,L-m,ox-30,"사용 길이 "+F(L-2*m));
+  o+=dimH(0,W,oy-(m>0?D2:D1),"원판 폭 "+F(W));if(m>0)o+=dimH(m,W-m,oy-D1,"사용 폭 "+F(W-2*m));
+  o+=dimV(0,L,ox-(m>0?D2:D1),"원판 길이 "+F(L));if(m>0)o+=dimV(m,L-m,ox-D1,"사용 길이 "+F(L-2*m));
   /* 아래·오른쪽: 제품 경계 위치 간격 (간격 포함) */
   const ex=[0],ey=[0];pl.forEach(p=>{[p.x,p.x+p.w].forEach(v=>{if(!ex.some(e=>Math.abs(e-v)<1))ex.push(v);});[p.y,p.y+p.h].forEach(v=>{if(!ey.some(e=>Math.abs(e-v)<1))ey.push(v);});});
   ex.sort((a,b)=>a-b);ey.sort((a,b)=>a-b);
-  const by=oy+SH+20;for(let i=1;i<ex.length;i++){const a=m+ex[i-1],b=m+ex[i],wpx=(b-a)*s;o+=dimH(a,b,by,wpx>=26?F(Math.round(b-a)):"");}
-  const rx=ox+SW+30;   /* v49 : 원판과 오른쪽 치수선 간격 넓힘(16→30), 글자는 치수선 왼쪽 */for(let i=1;i<ey.length;i++){const a=m+ey[i-1],b=m+ey[i],hpx=(b-a)*s;o+=dimV(a,b,rx,hpx>=16?F(Math.round(b-a)):"",false,true);}
+  const by=oy+SH+D1;for(let i=1;i<ex.length;i++){const a=m+ex[i-1],b=m+ex[i],wpx=(b-a)*s;o+=dimH(a,b,by,wpx>=26?F(Math.round(b-a)):"");}
+  const rx=ox+SW+D1;   /* v49 : 원판과 오른쪽 치수선 간격 넓힘(16→30), 글자는 치수선 왼쪽 */for(let i=1;i<ey.length;i++){const a=m+ey[i-1],b=m+ey[i],hpx=(b-a)*s;o+=dimV(a,b,rx,hpx>=16?F(Math.round(b-a)):"",false,true);}
   /* v38 : 남는 폭·길이는 아래·오른쪽 치수선 끝에 이어서 표시 (치수선 마지막 위치 → 사용 영역 끝) */
   const eX=ex[ex.length-1],eY=ey[ey.length-1],remW=W-2*m-eX,remL=L-2*m-eY;
-  if(remW>=1)o+=dimH(m+eX,W-m,by,"남는 폭 "+F(Math.round(remW)),true);
-  if(remL>=1)o+=dimV(m+eY,L-m,rx,"남는 길이 "+F(Math.round(remL)),true,true);
+  if(remW>=1)o+=dimH(m+eX,W-m,by,"남는 폭 "+F(Math.round(remW)),true,remW*s<64);
+  if(remL>=1)o+=dimV(m+eY,L-m,rx,"남는 길이 "+F(Math.round(remL)),true,true,remL*s<70);
   return o+"</svg>";}
 function drawPD(){if(!PICK||!PICK.sheets){closePD();return;}const M=model(),c=PICK,pats=patterns(c);if(!pats.length){closePD();return;}
   if(PD.i>=pats.length)PD.i=pats.length-1;const x=pats[PD.i],pi=patInfo(M,c,x.pl),shKg=kgOf(M,c.W,c.L,1);
@@ -2776,7 +2777,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v49';
+var COIL_VER='v50';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
