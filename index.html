@@ -530,7 +530,7 @@ body:has(#bootWait:not(.out)) .dbfm-btn{visibility:hidden!important}
         <table>
           <thead id="invHead"><tr>
             <th></th><th data-sort="mat">재질</th><th class="r" data-sort="t">두께</th><th class="r" data-sort="w">폭</th>
-            <th class="r" data-sort="stock">현재고(kg)</th><th class="r" data-sort="avg">월평균매입(kg)</th><th class="r" data-sort="cover">재고개월</th><th data-sort="cycle">발주주기</th><th data-sort="status">상태</th><th class="r" data-sort="qty">주문(본)</th>
+            <th class="r" data-sort="stock">현재고(kg)</th><th class="r" data-sort="avg">월평균매입(kg)</th><th class="r" data-sort="cover">재고개월</th><th class="r" data-sort="cycle">발주주기</th><th data-sort="status">상태</th><th class="r" data-sort="qty">주문(본)</th>
           </tr></thead>
           <tbody id="inv"></tbody>
         </table>
@@ -1162,7 +1162,7 @@ function renderInv(){
       <td class="r">${col?`<span class="sw" style="background:${col}"></span>`:""}<b>${fw(it.w)}</b></td>
       <td class="r">${it.stockKg==null?'<span class="muted">-</span>':fmt(it.stockKg)}</td>
       <td class="r">${it.ps&&it.ps.avgM?fmt(it.ps.avgM):'<span class="muted">-</span>'}</td>
-      <td class="r">${cv==null?"-":cv.toFixed(1)}</td><td>${cyc}</td><td>${st}</td>
+      <td class="r">${cv==null?"-":cv.toFixed(1)}</td><td class="r">${cyc}</td><td>${st}</td>
       <td class="r"><input type="number" data-f="qty" value="${sel?S.sel[it.k]:""}" min="0" ${sel?"":"disabled"} placeholder="-"></td></tr>`;
   }).join("");
 }
@@ -1986,7 +1986,7 @@ window.__coil={
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v25';
+var COIL_VER='v26';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
