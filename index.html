@@ -495,6 +495,7 @@ body:not(.mode-plate) .plate-only{display:none!important}
 .lblbtn{display:inline-flex;align-items:center;gap:4px;align-self:flex-start;background:var(--accent-soft)!important;border:1px solid var(--accent)!important;border-radius:999px!important;padding:0 9px!important;height:19px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;line-height:17px;text-decoration:none;transition:background .15s,color .15s}
 .lblbtn:hover{background:var(--accent)!important;color:#fff}
 .lbtn-i{font-weight:800;font-size:13px;line-height:1}
+.minib{padding:0 9px!important;height:19px;line-height:17px;font-size:11.5px!important;border-radius:999px!important}
 .lblrow{display:flex;align-items:center;gap:6px;height:17px;position:relative}
 .psrc{position:absolute;left:2px;bottom:100%;margin-bottom:3px;font-size:11px;color:var(--muted);white-space:nowrap;line-height:1.2}   /* v53 : 출처는 단가 버튼 위에 */
 #pPrice.auto,#cPrice.auto{color:var(--ok);font-weight:700}
@@ -700,10 +701,9 @@ body:not(.mode-plate) .plate-only{display:none!important}
     <div class="cg">
       <div class="cg-t">원자재 규격</div>
       <div class="cg-r">
-        <label class="cf">재질 (강종)<select id="pMat" class="matsel strong" style="width:200px"></select></label>
+        <div class="cf"><span class="lblrow">재질 (강종)<button class="sm minib" id="pFromCoil" type="button" title="코일 화면에서 고른 재질·두께로 맞춥니다">코일 규격으로</button></span><select id="pMat" class="matsel strong" style="width:200px" aria-label="재질 (강종)"></select></div>
         <label class="cf">두께 (mm)<input id="pT" class="strong" type="number" step="0.05" min="0.1" style="width:84px"></label>
         <div class="cf"><span class="lblrow"><button type="button" class="lblbtn" id="pPriceBtn" title="눌러서 이 재질의 원자재 단가현황 보기 (매입분석도구)">단가 (원/kg) <span class="lbtn-i">›</span></button><small id="pPriceSrc" class="psrc"></small></span><input id="pPrice" type="number" min="0" step="10" style="width:110px" placeholder="단가 없음"></div>
-        <div class="cf"><span>&nbsp;</span><button class="sm" id="pFromCoil" type="button" title="코일 화면에서 고른 재질·두께로 맞춥니다">코일 규격으로</button></div>
       </div>
     </div>
     <div class="cg">
@@ -2815,7 +2815,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v59';
+var COIL_VER='v60';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
