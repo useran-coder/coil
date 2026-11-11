@@ -446,6 +446,8 @@ body:not(.mode-plate) .plate-only{display:none!important}
 .psvg-sheet{fill:var(--steel1);fill-opacity:.35;stroke:var(--steel2);stroke-width:1.2}
 .psvg-mar{fill:none;stroke:var(--steel2);stroke-dasharray:4 3;stroke-width:.8}
 .psvg-txt{fill:#111;font-weight:700;font-family:inherit}
+.resetb{margin-left:auto;font-weight:600}
+.resetb:hover{border-color:var(--bad)!important;color:var(--bad)}
 .pstk{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 #platePanel .pg2{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px;align-items:start;margin-top:4px}
 @media (max-width:1100px){#platePanel .pg2{grid-template-columns:minmax(0,1fr)}}
@@ -581,7 +583,7 @@ body:not(.mode-plate) .plate-only{display:none!important}
 
   <!-- 1. 코일 그림 -->
   <section class="panel no-print coil-only" id="coilSection">
-    <h2><span class="num">1</span>코일(원판) 슬리팅 배열</h2>
+    <h2><span class="num">1</span>코일(원판) 슬리팅 배열<button type="button" class="sm resetb" id="coilReset" title="주문 폭·수량·조합·직접 배열 코일을 모두 비웁니다 (↶ 취소로 되돌리기)">⟲ 초기화</button></h2>
     <div class="cfg">
       <div class="cg">
         <div class="cg-t">원자재 규격</div>
@@ -632,7 +634,7 @@ body:not(.mode-plate) .plate-only{display:none!important}
 
 <section class="panel no-print plate-only" id="platePanel">
   <h2><span class="num">1</span>판재(원판) 배열 · 원자재 산출
-    <span class="muted" style="font-weight:400;font-size:12px">제품(폭×길이×수량)을 넣으면 표준 원판과 코일 절단 판재를 비교해 필요한 장수·수율·원자재 무게·금액과 배열도를 보여 줍니다</span></h2>
+    <span class="muted" style="font-weight:400;font-size:12px">제품(폭×길이×수량)을 넣으면 표준 원판과 코일 절단 판재를 비교해 필요한 장수·수율·원자재 무게·금액과 배열도를 보여 줍니다</span><button type="button" class="sm resetb" id="plateReset" title="제품 목록·선택한 원판·배열안을 비웁니다 (↶ 취소로 되돌리기)">⟲ 초기화</button></h2>
   <div class="cfg">
     <div class="cg">
       <div class="cg-t">원자재 규격</div>
@@ -1868,6 +1870,14 @@ document.addEventListener("keydown",e=>{
     e.preventDefault(); undo();
   }
 });
+/* v33 : 코일 조합 초기화 — 주문 선택·직접 입력 폭·조합 고정·직접 배열 코일을 비움 (재질·두께·코일폭·조건·발주 정보·직접 추가한 재고 품목은 그대로) */
+function coilReset(){
+  if(!confirm("코일 조합을 초기화할까요?\n\n주문 폭 선택, 직접 입력한 폭·수량, 손으로 고친 조합, 직접 배열 코일을 모두 비웁니다.\n재질·두께·코일 폭·슬리팅 조건·발주 정보는 그대로 둡니다.\n(↶ 취소 또는 Ctrl+Z로 되돌릴 수 있습니다)"))return;
+  pushUndo("코일 조합 초기화");
+  S.sel={};S.manualRows=[{w:"",q:""}];S.locked={};S.coils=[];S.tab="auto";S.fixed=[];S.groupWeights={};
+  selLane=null;active={g:0,p:0};refresh();updToggle();msg("코일 조합을 초기화했습니다. (↶ 취소로 되돌리기)");
+}
+document.getElementById("coilReset").addEventListener("click",coilReset);
 function cleanManualRows(){S.manualRows=S.manualRows.filter(r=>+r.w>0&&+r.q>0);if(!S.manualRows.length)S.manualRows=[{w:"",q:""}];}
 $("#result").addEventListener("click",e=>{
   const ub=e.target.closest("[data-undo]"); if(ub){e.stopPropagation();undo();return;}
@@ -2457,6 +2467,10 @@ $("#pRows").addEventListener("keydown",e=>{if(e.key!=="Enter"||e.isComposing)ret
 $("#pAddRow").addEventListener("click",()=>{snap("제품 추가");const p=P();p.rows.push({n:"",w:"",l:"",q:"",nr:0});save();renderRows({i:p.rows.length-1,k:"n"});});
 $("#pClear").addEventListener("click",()=>{const p=P();if(!p.rows.some(r=>num(r.w)||num(r.l)||num(r.q)||r.n))return;if(!confirm("제품 목록을 모두 지울까요? (↶ 취소로 되돌릴 수 있습니다)"))return;snap("전체 지우기");p.rows=[{n:"",w:"",l:"",q:"",nr:0}];p.pick="";save();renderRows();compute();});
 $("#pUndo").addEventListener("click",undo);
+/* v33 : 판재 조합 초기화 — 제품 목록·선택 원판·배열안을 비움 (재질·두께·단가·배열 조건·원판 후보는 그대로) */
+$("#plateReset").addEventListener("click",()=>{const p=P();
+  if(!confirm("판재 조합을 초기화할까요?\n\n제품 목록, 선택한 원판, 고른 배열안을 비웁니다.\n재질·두께·단가·배열 조건·원판 후보는 그대로 둡니다.\n(↶ 취소 또는 Ctrl+Z로 되돌릴 수 있습니다)"))return;
+  snap("판재 조합 초기화");p.rows=[{n:"",w:"",l:"",q:"",nr:0}];p.pick="";p.plan=0;save();closePD();PICK=null;renderAll();C.msg("판재 조합을 초기화했습니다. (↶ 취소로 되돌리기)");});
 function parsePaste(txt){const out=[];String(txt||"").split(/\r?\n/).forEach(line=>{if(!line.trim())return;const cells=line.split(/\t|,|;/).map(s=>s.trim()).filter(s=>s!=="");
   let name="",nums=[];cells.forEach(cl=>{const m=cl.match(/^(\d+(?:\.\d+)?)\s*[x×*X]\s*(\d+(?:\.\d+)?)(?:\s*[x×*X]\s*(\d+(?:\.\d+)?))?$/);
     if(m){if(m[3]){nums.push(+m[2],+m[3]);}else nums.push(+m[1],+m[2]);return;}const v=cl.replace(/,/g,"");if(/^\d+(\.\d+)?$/.test(v)){nums.push(+v);return;}if(!name)name=cl;});
@@ -2628,7 +2642,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v32';
+var COIL_VER='v33';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
