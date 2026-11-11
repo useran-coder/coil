@@ -391,7 +391,7 @@ body:has(#bootWait:not(.out)) .dbfm-btn{visibility:hidden!important}
 .modemenu button.on::after{content:"✓";margin-left:auto;color:var(--accent);font-weight:700}
 body.mode-plate .coil-only{display:none!important}
 body:not(.mode-plate) .plate-only{display:none!important}
-#platePanel .pg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;align-items:start;margin-top:14px}
+#platePanel .pg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start;margin-top:14px}
 @media (max-width:1100px){#platePanel .pg{grid-template-columns:minmax(0,1fr)}}
 #platePanel h4{font-size:13.5px;margin:0 0 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 #platePanel h4 .muted{font-weight:400;font-size:11.5px}
@@ -432,7 +432,8 @@ body:not(.mode-plate) .plate-only{display:none!important}
 .pstat .k{font-size:11.5px;color:var(--muted)}
 .pstat .v{font-size:18px;font-weight:700}
 .pstat .v small{font-size:12px;font-weight:600;color:var(--muted)}
-.ppats{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.ppats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:700px){.ppats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .ppat{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .ppat .ph{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;font-size:12.5px;flex-wrap:wrap}
 .ppat .ph b{font-size:13.5px}
@@ -445,7 +446,14 @@ body:not(.mode-plate) .plate-only{display:none!important}
 .psvg-sheet{fill:var(--steel1);fill-opacity:.35;stroke:var(--steel2);stroke-width:1.2}
 .psvg-mar{fill:none;stroke:var(--steel2);stroke-dasharray:4 3;stroke-width:.8}
 .psvg-txt{fill:#111;font-weight:700;font-family:inherit}
-.pstk{margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.pstk{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+#platePanel .pg2{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px;align-items:start;margin-top:4px}
+@media (max-width:1100px){#platePanel .pg2{grid-template-columns:minmax(0,1fr)}}
+#platePanel .pg2 .pn{width:100%!important;min-width:70px}
+#platePanel .pg2 #pRows td input[data-k="w"],#platePanel .pg2 #pRows td input[data-k="l"],#platePanel .pg2 #pRows td input[data-k="q"]{width:74px}
+#platePanel .pg2 .ptbl td,#platePanel .pg2 .ptbl th{padding-left:4px;padding-right:4px}
+.pstk .ptbl{font-size:12px}.pstk .ptbl th{white-space:normal;line-height:1.25}.pstk .ptbl td,.pstk .ptbl th{padding-left:4px;padding-right:4px}
+.pstk .tbl-wrap{max-height:340px!important}
 .pstk h4{margin:0 0 6px!important}
 .pstk .tbl-wrap{max-height:260px;overflow:auto}
 .pstk tr.inuse td{background:var(--accent-soft)}
@@ -660,8 +668,16 @@ body:not(.mode-plate) .plate-only{display:none!important}
     </div>
   </div>
 
-  <div class="pstk" id="pStk"></div>
   <div class="pg">
+    <div><div class="pstk" id="pStk"></div></div>
+    <div>
+      <h4>원판별 비교 <span class="muted">줄을 누르면 그 원판으로 배열도를 봅니다</span></h4>
+      <div id="pCmp"></div>
+    </div>
+  </div>
+  <div id="pOut" style="margin-top:16px"></div>
+  <div class="pg2">
+    <div><div id="pPats"></div></div>
     <div>
       <h4>제품 목록 <span class="muted">Enter → 다음 칸 · 마지막 칸에서 Enter → 줄 추가 · 「결 고정」은 제품 길이를 원판 길이 방향(압연 방향)으로만 놓음</span></h4>
       <div class="tbl-wrap">
@@ -680,12 +696,8 @@ body:not(.mode-plate) .plate-only{display:none!important}
         <div class="pchips" style="margin-top:6px"><button class="sm pri" id="pPasteAdd" type="button">목록에 추가</button><button class="sm" id="pPasteRep" type="button">목록 바꾸기</button></div>
       </details>
     </div>
-    <div>
-      <h4>원판별 비교 <span class="muted">줄을 누르면 그 원판으로 배열도를 봅니다</span></h4>
-      <div id="pCmp"></div>
-    </div>
   </div>
-  <div id="pOut" style="margin-top:16px"></div>
+  <div id="pOutBot"></div>
 </section>
 <div class="pscrim no-print" id="pScrim"></div>
 <aside class="pdrawer no-print" id="pDrawer" aria-hidden="true" role="dialog" aria-label="배열도 상세">
@@ -2213,7 +2225,7 @@ function candidates(M){const out=[],seen={};
 function coilWs(M){const S=M.S,ws=(Array.isArray(S.presets)?S.presets:[]).concat([S.mw]).map(Number).filter(v=>v>=300&&v<=2500);return [...new Set(ws)].sort((a,b)=>a-b);}
 
 /* ---------- 그림 ---------- */
-function svgSheet(M,c,pl,opt){opt=opt||{};const W=c.W,L=c.L,land=L>=W,LX=land?L:W,LY=land?W:L,PW=opt.pw||620,s=PW/LX,top=16,PH=LY*s;
+function svgSheet(M,c,pl,opt){opt=opt||{};const W=c.W,L=c.L,land=opt.portrait?false:L>=W,LX=land?L:W,LY=land?W:L,PW=opt.pw||620,s=PW/LX,top=16,PH=LY*s;
   const tx=(x,y,w,h)=>land?{X:y*s,Y:top+x*s,w:h*s,h:w*s}:{X:x*s,Y:top+y*s,w:w*s,h:h*s};
   let g=`<svg viewBox="-1 0 ${PW+2} ${top+PH+16}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${W}×${L} 원판 배열도">`;
   const sh=tx(0,0,W,L);
@@ -2221,8 +2233,8 @@ function svgSheet(M,c,pl,opt){opt=opt||{};const W=c.W,L=c.L,land=L>=W,LX=land?L:
   const mr=tx(M.m,M.m,W-2*M.m,L-2*M.m);if(M.m>0)g+=`<rect x="${mr.X}" y="${mr.Y}" width="${mr.w}" height="${mr.h}" ${opt.print?'fill="none" stroke="#888" stroke-dasharray="4 3" stroke-width=".8"':'class="psvg-mar"'}/>`;
   pl.forEach(p=>{const r=M.rows[p.it.ri],pw=p.w-M.gap,ph=p.h-M.gap,b=tx(M.m+p.x,M.m+p.y,pw,ph),col=colOf(r.ri);
     g+=`<rect x="${b.X.toFixed(2)}" y="${b.Y.toFixed(2)}" width="${Math.max(.5,b.w).toFixed(2)}" height="${Math.max(.5,b.h).toFixed(2)}" fill="${col}" fill-opacity=".78" stroke="${col}" stroke-width=".8"><title>${esc((r.n?r.n+" ":"")+F(r.w)+"×"+F(r.l)+(p.r?" (90° 회전)":""))}</title></rect>`;
-    const lab=(p.r?"↻":"")+F(r.w)+"×"+F(r.l),fs=Math.min(12,b.h*.42,b.w/(lab.length*.62));
-    if(fs>=6)g+=`<text x="${(b.X+b.w/2).toFixed(1)}" y="${(b.Y+b.h/2).toFixed(1)}" font-size="${fs.toFixed(1)}" text-anchor="middle" dominant-baseline="central" fill="#111" font-weight="700">${lab}</text>`;
+    const lab=(p.r?"↻":"")+F(r.w)+"×"+F(r.l),vt=b.h>b.w*1.4,ln=vt?b.h:b.w,th=vt?b.w:b.h,fs=Math.min(opt.portrait?16:12,th*.42,ln/(lab.length*.62)),cx=(b.X+b.w/2).toFixed(1),cy=(b.Y+b.h/2).toFixed(1);
+    if(fs>=6)g+=`<text x="${cx}" y="${cy}" font-size="${fs.toFixed(1)}" text-anchor="middle" dominant-baseline="central" fill="#111" font-weight="700"${vt?` transform="rotate(-90 ${cx} ${cy})"`:""}>${lab}</text>`;
     else{const f2=Math.min(11,b.h*.6,b.w*.7);if(f2>=5)g+=`<text x="${(b.X+b.w/2).toFixed(1)}" y="${(b.Y+b.h/2).toFixed(1)}" font-size="${f2.toFixed(1)}" text-anchor="middle" dominant-baseline="central" fill="#111" font-weight="700">${r.ri+1}</text>`;}});
   const dim=opt.print?'fill="#555" font-size="11"':'class="psvg-dim"';
   g+=`<text x="${PW/2}" y="11" text-anchor="middle" ${dim}>${F(LX)} mm</text>`;
@@ -2240,7 +2252,7 @@ function undo(){const s=UNDO.pop();if(!s){C.msg("되돌릴 작업이 없습니�
 
 function rowsHtml(){const M=model();return M.p.rows.map((r,i)=>{const w=num(r.w),l=num(r.l),q=Math.round(num(r.q)),kg=w>0&&l>0&&q>0?kgOf(M,w,l,q):0,ri=M.rows.findIndex(x=>x.src===i);
   return `<tr data-i="${i}"><td class="c">${ri>=0?`<span class="pdot" style="background:${colOf(ri)}"></span>`:""}${i+1}</td>
-   <td class="l"><input class="pn" data-k="n" value="${esc(r.n||"")}" placeholder="품명" style="width:150px"></td>
+   <td class="l"><input class="pn" data-k="n" value="${esc(r.n||"")}" placeholder="품명"></td>
    <td><input data-k="w" type="number" min="0" step="0.5" value="${esc(r.w)}"></td>
    <td><input data-k="l" type="number" min="0" step="0.5" value="${esc(r.l)}"></td>
    <td><input data-k="q" type="number" min="0" step="1" value="${esc(r.q)}"></td>
@@ -2274,7 +2286,7 @@ function computeNow(){if(C.get().mode!=="plate")return;const M=model();
   PICK=pk?Object.assign({},pk):null;
   renderCmp(M,cs);renderOut(M,pk);renderCfg();renderStk(M);if(PD.open)drawPD();}
 function renderOut(M,pk){
-  if(!pk){$("#pOut").innerHTML=M.rows.length?'<div class="pwarn">원판 후보 중에 제품이 들어가는 원판이 없습니다. 원판 후보를 추가하거나 회전 허용을 켜 보세요.</div>':"";return;}
+  if(!pk){$("#pPats").innerHTML=M.rows.length?"":'<h4>배열도</h4><div class="muted" style="padding:30px 4px;font-size:12.5px">오른쪽 제품 목록에 폭·길이·수량을 넣으면 여기에 배열도가 나옵니다.</div>';$("#pOutBot").innerHTML="";$("#pOut").innerHTML=M.rows.length?'<div class="pwarn">원판 후보 중에 제품이 들어가는 원판이 없습니다. 원판 후보를 추가하거나 회전 허용을 켜 보세요.</div>':"";return;}
   const plans={1:calc(M,pk.W,pk.L,1),2:calc(M,pk.W,pk.L,2)};
   const draw=(r3)=>{if(r3)plans[3]=r3;
     const avail=[1,2,3].filter(k=>plans[k]);
@@ -2301,11 +2313,11 @@ function renderOut(M,pk){
     if(c.left.length)h+=`<div class="pwarn">배열하지 못한 제품 ${c.left.length}개가 있습니다.</div>`;
     if(pk.pin)h+=`<div class="pnote" style="margin:-4px 0 10px">이 판재 재고 ${F(pk.pstock)}장 · 필요 ${F(c.n)}장 → ${pk.pstock>=c.n?'<b style="color:var(--ok)">재고로 충분</b>':'<b style="color:var(--bad)">'+F(c.n-pk.pstock)+'장 부족 (발주 필요)</b>'}</div>`;
     if(pk.kind==="coil")h+=`<div class="pnote" style="margin:-4px 0 10px">코일 폭 ${F(pk.W)}mm를 ${F(pk.L)}mm로 ${F(c.n)}장 절단 = 코일 ${F(c.raw,0)}kg 사용${pk.stock?` · 이 폭 코일 재고 ${F(pk.stock)}kg (${pk.stock>=c.raw?'<b style="color:var(--ok)">재고로 충분</b>':'<b style="color:var(--bad)">'+F(c.raw-pk.stock)+'kg 부족</b>'})`:" · 이 폭 코일 재고 없음"}</div>`;
-    h+=`<h4>배열도 <span class="muted">같은 배열은 묶어서 «× 장수»로 표시 · ↻ = 90° 돌려 놓은 제품</span></h4><div class="ppats">`;
+    $("#pOut").innerHTML=h;h=`<h4>배열도 <span class="muted">같은 배열은 묶어서 «× 장수»로 표시 · ↻ = 90° 돌려 놓은 제품 · 그림을 누르면 자세히</span></h4><div class="ppats">`;
     pats.forEach((o,i)=>{const pi=patInfo(M,c,o.pl);
-      h+=`<div class="ppat" data-pat="${i}" role="button" tabindex="0" title="눌러서 배열도 자세히 보기"><div class="ph"><b>배열 ${i+1}</b><span class="muted">장당 ${pi.pcs}개 · 사용률 ${F(pi.use,1)}%</span><span class="open">🔍 자세히</span><span class="x">× ${F(o.n)}장</span></div>${svgSheet(M,c,o.pl)}
+      h+=`<div class="ppat" data-pat="${i}" role="button" tabindex="0" title="눌러서 배열도 자세히 보기"><div class="ph"><b>배열 ${i+1}</b><span class="muted">장당 ${pi.pcs}개 · 사용률 ${F(pi.use,1)}%</span><span class="x"><span class="open" title="자세히">🔍</span> × ${F(o.n)}장</span></div>${svgSheet(M,c,o.pl,{portrait:1})}
         <div class="pl">${Object.keys(pi.cnt).map(ri=>{const r=M.rows[ri];return `<span class="pdot" style="background:${colOf(+ri)}"></span>${esc(r.n||"제품 "+(+ri+1))} ${F(r.w)}×${F(r.l)} <b>${pi.cnt[ri]}개</b>`;}).join(" &nbsp; ")}</div></div>`;});
-    h+=`</div>`;
+    h+=`</div>`;$("#pPats").innerHTML=h;h="";
     /* 품목별 */
     const put={};c.sheets.forEach(pl=>pl.forEach(p=>{put[p.it.ri]=(put[p.it.ri]||0)+1;}));
     h+=`<h4 style="margin-top:16px">제품별 배열</h4><div class="tbl-wrap"><table class="ptbl"><thead><tr><th class="c">No</th><th class="l">품명</th><th>제품 치수</th><th>배열 치수(간격 포함)</th><th>수량</th><th>배열됨</th><th>단독 배열 시 장당</th><th>단독 시 필요 장수</th><th>단독 수율</th><th>순중량</th></tr></thead><tbody>`;
@@ -2315,7 +2327,7 @@ function renderOut(M,pk){
         <td style="color:${(put[r.ri]||0)<r.q?"var(--bad)":"var(--ok)"};font-weight:700">${F(put[r.ri]||0)}</td><td>${s1.n?F(s1.n)+" 개"+(s1.r?" ↻":""):"-"}</td><td>${need?F(need)+" 장":"-"}</td><td>${need?F(sy,1)+"%":"-"}</td><td>${F(kgOf(M,r.w,r.l,r.q),1)} kg</td></tr>`;});
     h+=`</tbody></table></div>
     <div class="pnote">계산 기준: 원판에서 가장자리 여유를 뺀 면적에 제품(+제품 간격)을 큰 것부터 빈 공간에 가장 꼭 맞게 넣습니다(MaxRects). 2안은 전단기로 자르기 쉬운 띠(열) 배열, 3안은 장마다 여러 배열을 비교해 남은 장수가 가장 적은 쪽을 고릅니다. ★ = 장수가 가장 적은 안. 실제 네스팅 프로그램(공통절단·잔재 활용)보다 약간 보수적으로 나올 수 있습니다.</div>`;
-    $("#pOut").innerHTML=h;
+    $("#pOutBot").innerHTML=h;
     if(document.getElementById("sheetPanel")&&!document.getElementById("sheetPanel").hidden)C.renderSheet();
   };
   draw();
@@ -2385,8 +2397,8 @@ function drawPD(){if(!PICK||!PICK.sheets){closePD();return;}const M=model(),c=PI
   $("#pdInfo").innerHTML=h;}
 function openPD(i){PD.i=i;PD.open=true;drawPD();$("#pDrawer").classList.add("on");$("#pScrim").classList.add("on");$("#pDrawer").setAttribute("aria-hidden","false");}
 function closePD(){PD.open=false;$("#pDrawer").classList.remove("on");$("#pScrim").classList.remove("on");$("#pDrawer").setAttribute("aria-hidden","true");}
-$("#pOut").addEventListener("click",e=>{const c=e.target.closest("[data-pat]");if(c)openPD(+c.dataset.pat);});
-$("#pOut").addEventListener("keydown",e=>{if(e.key!=="Enter"&&e.key!==" ")return;const c=e.target.closest("[data-pat]");if(c){e.preventDefault();openPD(+c.dataset.pat);}});
+$("#pPats").addEventListener("click",e=>{const c=e.target.closest("[data-pat]");if(c)openPD(+c.dataset.pat);});
+$("#pPats").addEventListener("keydown",e=>{if(e.key!=="Enter"&&e.key!==" ")return;const c=e.target.closest("[data-pat]");if(c){e.preventDefault();openPD(+c.dataset.pat);}});
 $("#pdThumbs").addEventListener("click",e=>{const t=e.target.closest("[data-pdi]");if(t){PD.i=+t.dataset.pdi;drawPD();}});
 $("#pdPrev").addEventListener("click",()=>{if(PD.i>0){PD.i--;drawPD();}});
 $("#pdNext").addEventListener("click",()=>{PD.i++;drawPD();});
@@ -2616,7 +2628,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v30';
+var COIL_VER='v31';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
