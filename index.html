@@ -484,8 +484,8 @@ body:not(.mode-plate) .plate-only{display:none!important}
 .lblbtn{display:inline-flex;align-items:center;gap:4px;align-self:flex-start;background:var(--accent-soft)!important;border:1px solid var(--accent)!important;border-radius:999px!important;padding:0 9px!important;height:19px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;line-height:17px;text-decoration:none;transition:background .15s,color .15s}
 .lblbtn:hover{background:var(--accent)!important;color:#fff}
 .lbtn-i{font-weight:800;font-size:13px;line-height:1}
-.lblrow{display:flex;align-items:center;gap:6px;height:17px}
-.psrc{font-size:11px;color:var(--muted);white-space:nowrap}
+.lblrow{display:flex;align-items:center;gap:6px;height:17px;position:relative}
+.psrc{position:absolute;left:2px;bottom:100%;margin-bottom:3px;font-size:11px;color:var(--muted);white-space:nowrap;line-height:1.2}   /* v53 : 출처는 단가 버튼 위에 */
 #pPrice.auto,#cPrice.auto{color:var(--ok);font-weight:700}
 .mpt{width:100%;border-collapse:collapse;font-size:12.5px}
 .mpt th,.mpt td{padding:6px 7px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
@@ -2796,7 +2796,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v52';
+var COIL_VER='v53';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
