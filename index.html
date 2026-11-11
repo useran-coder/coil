@@ -888,7 +888,8 @@ if(S.fixed.length){
   S.fixed=[];
 }
 if(!S.tab||(S.tab!=="auto"&&!S.coils.some(c=>c.id===S.tab)))S.tab="auto";
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} if(typeof window.__coilOnSave==='function'&&!window.__coilApplying){try{window.__coilOnSave();}catch(e){}}}
+function save(){if(window.__coilInactive)return;   /* v78 : 다른 탭이 맡은 동안 이 탭은 저장하지 않음 */
+  try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} if(typeof window.__coilOnSave==='function'&&!window.__coilApplying){try{window.__coilOnSave();}catch(e){}}}
 
 /* ============================================================
    연동: 매입분석(dbpastec_purchase) · 영업분석(dbpastec_sales) IndexedDB 읽기 전용
@@ -2213,6 +2214,7 @@ window.__coil={
       buildIndex(); renderPresets(); refresh(); updToggle(); renderSupplier();
       try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
     }finally{window.__coilApplying=false;}
+    try{window.__plateRender&&window.__plateRender();}catch(e){}
   }
 };
 })();
@@ -2874,7 +2876,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v77';
+var COIL_VER='v78';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
@@ -3004,7 +3006,35 @@ const coilSync=(function(){
   }
   const hhmm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
   function snapshot(){const o=JSON.parse(JSON.stringify(window.__coil.get()));delete o._at;return o;}
-  function apply(entry){let data;try{data=JSON.parse(entry.json);}catch(e){return false;}window.__coil.apply(data);return true;}
+  function apply(entry){let data;try{data=JSON.parse(entry.json);}catch(e){return false;}
+    data.mode=window.__coil.get().mode||'coil';   /* v78 : 코일/판재 화면 선택은 이 탭 것 유지 — 서버 내용 때문에 화면이 바뀌지 않음 */
+    window.__coil.apply(data,true);return true;}
+  /* v78 : 다른 탭·다른 PC 내용을 받기 직전 이 탭 내용을 보관 → «받기 전으로» 버튼으로 되돌림 */
+  const BK='coilBeforeSyncV1';
+  function backup(){try{const j=JSON.stringify(snapshot());auLsSet(BK,{at:Date.now(),json:j});return j;}catch(_){return '';}}
+  function restoreBackup(){const b=auLsGet(BK);if(!b||!b.json)return;let d;try{d=JSON.parse(b.json);}catch(_){return;}
+    d.mode=window.__coil.get().mode||'coil';window.__coil.apply(d,true);window.__coil.get()._at=Date.now();dirty=true;ready=true;metaSave();push();
+    hideToast();window.__coil.msg('받기 전 내용으로 되돌림 (서버에도 다시 저장)');}
+  function toast(txt){let t=document.getElementById('syncToast');
+    if(!t){t=document.createElement('div');t.id='syncToast';t.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:9998;background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:12px;padding:10px 14px;box-shadow:0 8px 30px rgba(0,0,0,.35);display:flex;gap:10px;align-items:center;font-size:13px;max-width:92vw';document.body.appendChild(t);}
+    t.innerHTML=`<span>${txt}</span><button type="button" class="sm" id="syncUndo" style="white-space:nowrap">↶ 받기 전으로</button><button type="button" class="sm" id="syncClose">닫기</button>`;
+    t.querySelector('#syncUndo').onclick=restoreBackup;t.querySelector('#syncClose').onclick=hideToast;clearTimeout(toast._t);toast._t=setTimeout(hideToast,30000);}
+  function hideToast(){const t=document.getElementById('syncToast');if(t)t.remove();}
+  /* v78 : 입력 중에는 받은 내용으로 덮어쓰지 않음 */
+  let lastEdit=0;['input','keydown','change','pointerdown'].forEach(ev=>document.addEventListener(ev,e=>{if(e.isTrusted)lastEdit=Date.now();},true));
+  const editing=()=>{const a=document.activeElement;return Date.now()-lastEdit<20000||(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&!a.closest('#auGate'));};
+  /* v78 : 같은 브라우저에 코일 조합이 두 탭 이상 열리면 나중 탭만 동기화 — 앞 탭은 멈춤(옛 화면이 새 내용을 덮어쓰지 않게) */
+  const TAB=Math.random().toString(36).slice(2);let tabOn=true,bc=null;
+  try{bc=new BroadcastChannel('coilOrderTabV1');bc.onmessage=ev=>{const m=ev.data||{};if(m.id===TAB)return;
+    if(m.t==='hello'&&tabOn)sleepTab();else if(m.t==='pushed'&&tabOn&&!dirty)pull(false);};}catch(_){}
+  async function sleepTab(){try{if(dirty){clearTimeout(pushT);await push();bc&&bc.postMessage({t:'pushed',id:TAB});}}catch(_){}
+    tabOn=false;window.__coilInactive=true;clearInterval(pollT);clearTimeout(pushT);
+    let o=document.getElementById('tabSleep');if(!o){o=document.createElement('div');o.id='tabSleep';
+      o.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px';
+      o.innerHTML='<div style="background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:22px 24px;max-width:440px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.4)"><div style="font-size:30px">🗂</div><div style="font-weight:800;font-size:16px;margin:6px 0 8px">다른 탭에서 코일 조합이 열림</div><div class="muted" style="font-size:13px;line-height:1.6">두 탭에서 같이 고치면 서로 덮어써서 내용이 지워질 수 있음.<br>이 탭은 멈춤 상태 — 고친 내용은 서버에 저장해 둠.</div><button type="button" class="pri" id="tabWake" style="margin-top:14px;padding:8px 18px">이 탭에서 계속 쓰기</button></div>';
+      document.body.appendChild(o);o.querySelector('#tabWake').onclick=()=>{claimTab();pull(true);clearInterval(pollT);pollT=setInterval(poll,45000);};}}
+  function claimTab(){tabOn=true;window.__coilInactive=false;const o=document.getElementById('tabSleep');if(o)o.remove();try{bc&&bc.postMessage({t:'hello',id:TAB});}catch(_){}}
+  function poll(){if(tabOn&&document.visibilityState==='visible'&&!dirty)pull(false);}
   async function pull(force){
     if(!auValid()||busy)return;
     busy=true; chip('busy','☁ 받는 중…');
@@ -3024,9 +3054,14 @@ const coilSync=(function(){
           ready=true; dirty=true; busy=false; await push(); return;
         }
       }
+      if(!tabOn)return;
+      const cur=meta.srvAt?JSON.stringify(snapshot()):'';
+      const same=(()=>{try{const a=JSON.parse(e.json),b=JSON.parse(cur||'{}');delete a.mode;delete b.mode;return JSON.stringify(a)===JSON.stringify(b);}catch(_){return false;}})();
+      if(meta.srvAt&&!force&&!same&&editing()){chip('busy','☁ 입력 중 — 받기 미룸');return;}   // 입력 중이면 다음 확인 때 받음
+      if(meta.srvAt&&!same)backup();
       apply(e); meta.srvAt=e.at; metaSave(); dirty=false; ready=true; lastErr=''; lastAt=Date.now();
       chip('ok','☁ 동기화됨 '+hhmm(lastAt));
-      if(e.by&&e.dev!==devId())window.__coil.msg(`서버에 저장된 최신 작업 내용을 불러옴 (${new Date(e.at).toLocaleString('ko-KR')})`);
+      if(meta.uid&&cur&&!same)toast(`${e.dev===devId()?'다른 탭':'다른 PC'}(${auEsc(e.by||'')} · ${new Date(e.at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})})에서 저장한 내용으로 바뀜`);
     }catch(err){
       lastErr=err.message||String(err);
       if(err.auth){if(await auTryAuto()){auApply();busy=false;return pull(force);} auApply(); auShowGate();}
@@ -3061,13 +3096,14 @@ const coilSync=(function(){
   };
   function start(){
     if(!auValid())return;
+    claimTab();
     ready=false; try{window.__coilBoot&&window.__coilBoot(3);}catch(_){}
     pull(true).finally(()=>{try{window.__coilBoot&&window.__coilBoot(4);bootWaitLink();}catch(_){}});
-    clearInterval(pollT); pollT=setInterval(()=>{if(document.visibilityState==='visible'&&!dirty)pull(false);},45000);
+    clearInterval(pollT); pollT=setInterval(poll,45000);
   }
   function stop(){clearInterval(pollT);clearTimeout(pushT);ready=false;chip('','☁ 로그아웃');}
   async function flush(){clearTimeout(pushT);if(dirty)await push();}
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&auValid()&&!dirty)pull(false);else if(document.visibilityState==='hidden')flush();});
+  document.addEventListener('visibilitychange',()=>{if(!tabOn)return;if(document.visibilityState==='visible'&&auValid()&&!dirty)pull(false);else if(document.visibilityState==='hidden')flush();});
   addEventListener('beforeunload',e=>{if(dirty&&auValid()){flush();e.preventDefault();e.returnValue='';}});
   return {start,stop,pull,push,flush,chipClick:()=>{if(dirty)push();else pull(true);}};
 })();
