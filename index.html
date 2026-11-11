@@ -824,7 +824,7 @@ body:not(.mode-plate) .plate-only{display:none!important}
 const KEY="coilOrderTool.v2";
 const PALETTE=["#2f6db5","#d9822b","#2e9e6a","#8e5cc4","#c2464b","#1f9aa8","#a07a1f","#5c6bc0","#d0578f","#4f8a3c","#7a5548","#3a7ca5"];
 /* 가공비 견적(press_cost_estimator)의 강종 · 비중 */
-const GRADES=[["EGI","전기아연도금",7.89],["PO","산세강판",7.85],["HGI","용융아연도금",7.85],["CR","냉연",7.85],["STS201","",7.93],["STS304","",7.93],["STS430","",7.7]];
+const GRADES=[["EGI","전기아연도금",7.89],["PO","산세강판",7.85],["HGI","용융아연도금",7.85],["CR","냉연",7.85],["STS201","",7.93],["STS304","",7.93],["STS430","",7.7],["STS430BEAD","비드",7.7]];
 const GRADE_DENS=Object.fromEntries(GRADES.map(g=>[g[0],g[2]]));
 const today=new Date().toISOString().slice(0,10);
 const $=s=>document.querySelector(s);
@@ -926,6 +926,8 @@ function renderLinkStat(){
 /* ---------- 규격 해석 ---------- */
 const GRX=/(?:^|[^A-Z])(STS\s*\d{3}|SUS\s*\d{3}|STS|SUS|SPCC|SPHC|SGCC|SECC|SGLCC|SAPH\d*|HGI|EGI|GA|GI|PO|CR|AL\d{0,4})(?=$|[^A-Z])/;
 function gradeOf(...vals){
+  /* v46 : STS430 중 BEAD(비드) 표기가 있으면 STS430BEAD (매입분석도구 v172 와 같은 기준) */
+  {const all=vals.map(v=>String(v||"")).join(" ").toUpperCase();if(/(STS|SUS)\s*430/.test(all)&&/BEAD|비드/.test(all))return "STS430BEAD";}
   for(const v of vals){const m=String(v||"").toUpperCase().match(GRX);if(m)return normMat(m[1].replace(/\s+/g,""));}
   return "";
 }
@@ -988,7 +990,7 @@ function buildIndex(){
   IDX=I;
 }
 function fillMatSelects(){
-  const opts=GRADES.map(([k,d,s])=>`<option value="${k}">${k}${d?" ("+d+")":""} · ${s}</option>`).join("");
+  const opts=GRADES.map(([k,d,s])=>`<option value="${k}">${k==="STS430BEAD"?"STS430 BEAD":k+(d?" ("+d+")":"")} · ${s}</option>`).join("");
   document.querySelectorAll("select.matsel").forEach(el=>{el.innerHTML=opts;});
 }
 
@@ -1292,7 +1294,7 @@ function renderResultActive(){
     x.classList.toggle("on",on); x.classList.remove("dim"); x.hidden=!on;
   });
 }
-function matOptions(sel){return GRADES.map(([k,d,s])=>`<option value="${k}"${k===sel?" selected":""}>${k}${d?" ("+d+")":""}</option>`).join("");}
+function matOptions(sel){return GRADES.map(([k,d,s])=>`<option value="${k}"${k===sel?" selected":""}>${k==="STS430BEAD"?"STS430 BEAD":k+(d?" ("+d+")":"")}</option>`).join("");}
 function renderSide(focus){
   const cc=curCoil();
   $("#autoPanel").hidden=!!cc; $("#coilPanel").hidden=!cc;
@@ -2753,7 +2755,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v45';
+var COIL_VER='v46';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
