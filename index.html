@@ -2393,7 +2393,7 @@ function renderCfg(){const p=P();$("#pMat").value=p.mat;$("#pT").value=p.t;{cons
   document.querySelectorAll("#pProc .chip").forEach(b=>b.classList.toggle("on",+b.dataset.gap===num(p.gap)&&+b.dataset.m===num(p.m)));
   const cur=(PICK&&PICK.key)||p.pick||"";
   $("#pSheets").innerHTML=p.sheets.map((s,i)=>{const k=num(s[0])+"x"+num(s[1]),on=cur===k;return `<span class="pchip pick${on?" on":""}" data-spick="${k}" role="button" tabindex="0" title="눌러서 이 원판으로 배열">${on?"✓ ":""}${szLab(s[2],s[0],s[1])}<button type="button" data-sdel="${i}" title="원판 후보에서 빼기">×</button></span>`;}).join("")||'<span class="muted" style="font-size:12px">원판 후보가 없습니다</span>';
-  const M=model();{const ws=coilWs(M),el=$("#pCoilWs");el.textContent=ws.length?"(코일 폭 "+F(ws[0])+(ws.length>1?" 외 "+(ws.length-1):"")+")":"";el.title=ws.length?"비교하는 코일 폭: "+ws.map(w=>F(w)).join(" · "):"";}   /* v64 : «914 외 6» 처럼 줄여 쓰고 전체는 풍선 */}
+  const M=model();{const ws=coilWs(M),el=$("#pCoilWs");el.textContent="";const lb=el.closest("label");if(lb)lb.title=ws.length?"비교하는 코일 폭: "+ws.map(w=>F(w)).join(" · "):"코일 화면의 빠른 선택 코일 폭을 판재 폭으로 쓰고, 제품에 맞는 절단 길이를 찾습니다";}   /* v72 : 괄호 문구 지우고 코일 폭 목록은 풍선으로만 */   /* v64 : «914 외 6» 처럼 줄여 쓰고 전체는 풍선 */}
 
 function renderCmp(M,cs){if(!M.rows.length){$("#pCmp").innerHTML='<div class="muted" style="padding:18px 4px">왼쪽에 제품 폭·길이·수량을 넣으면 원판별로 비교합니다.</div>';return;}
   let h=`<div class="tbl-wrap"><table class="ptbl"><thead><tr><th class="l">원판</th><th>필요 장수</th><th>원자재 소요</th><th>수율</th><th>스크랩</th><th>원자재 금액</th><th class="l">비고</th></tr></thead><tbody>`;
@@ -2861,7 +2861,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v71';
+var COIL_VER='v72';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
