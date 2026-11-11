@@ -2302,7 +2302,7 @@ function rowsHtml(){const M=model();return M.p.rows.map((r,i)=>{const w=num(r.w)
 function renderRows(focus){$("#pRows").innerHTML=rowsHtml();if(focus){const el=document.querySelector(`#pRows tr[data-i="${focus.i}"] input[data-k="${focus.k}"]`);if(el){el.focus();try{el.select();}catch(e){}}}}
 function renderCfg(){const p=P();$("#pMat").value=p.mat;$("#pT").value=p.t;{const a=mpApplied(p.mat),pe=$("#pPrice"),man=num(p.price)>0;pe.value=man?p.price:(a?Math.round(a.v):"");pe.classList.toggle("auto",!man&&!!a);pe.title=man?"직접 입력한 단가 (지우면 매입분석 단가로 돌아감)":a?`매입분석도구 원자재 단가 · ${a.y}년 ${a.mo}월 최고 ${F(a.v)}원/kg (최저 ${F(a.min)}원, ${a.n}개 업체) · 직접 고치면 그 값을 씀`:"매입분석도구에 이 재질 단가가 없습니다";}$("#pM").value=p.m;$("#pGap").value=p.gap;$("#pRot").checked=!!+p.rot;$("#pCoil").checked=!!+p.coil;
   document.querySelectorAll("#pProc .chip").forEach(b=>b.classList.toggle("on",+b.dataset.gap===num(p.gap)&&+b.dataset.m===num(p.m)));
-  const cur=PICK&&PICK.key;
+  const cur=(PICK&&PICK.key)||p.pick||"";
   $("#pSheets").innerHTML=p.sheets.map((s,i)=>{const k=num(s[0])+"x"+num(s[1]),on=cur===k;return `<span class="pchip pick${on?" on":""}" data-spick="${k}" role="button" tabindex="0" title="눌러서 이 원판으로 배열">${on?"✓ ":""}${szLab(s[2],s[0],s[1])}<button type="button" data-sdel="${i}" title="원판 후보에서 빼기">×</button></span>`;}).join("")||'<span class="muted" style="font-size:12px">원판 후보가 없습니다</span>';
   const M=model();$("#pCoilWs").textContent="(코일 폭 "+coilWs(M).join(" · ")+")";}
 
@@ -2325,7 +2325,11 @@ function computeNow(){if(C.get().mode!=="plate")return;const M=model();
   PICK=pk?Object.assign({},pk):null;
   renderCmp(M,cs);renderOut(M,pk);renderCfg();renderStk(M);if(PD.open)drawPD();}
 function renderOut(M,pk){
-  if(!pk){$("#pPats").innerHTML=M.rows.length?"":'<h4>배열도</h4><div class="muted" style="padding:30px 4px;font-size:12.5px">오른쪽 제품 목록에 폭·길이·수량을 넣으면 여기에 배열도가 나옵니다.</div>';$("#pOutBot").innerHTML="";$("#pOut").innerHTML=M.rows.length?'<div class="pwarn">원판 후보 중에 제품이 들어가는 원판이 없습니다. 원판 후보를 추가하거나 회전 허용을 켜 보세요.</div>':"";return;}
+  if(!pk){const pkS=String(M.p.pick||"").split("x").map(Number);
+    /* v40 : 제품이 없어도 원판 후보를 누르면 빈 원판 그림을 보여 줌 */
+    if(pkS.length===2&&pkS[0]>0&&pkS[1]>0){const sh=M.p.sheets.find(x=>+x[0]===pkS[0]&&+x[1]===pkS[1]),c0={W:pkS[0],L:pkS[1]},nm=sh?sh[2]:"";
+      $("#pPats").innerHTML=`<h4>배열도 <span class="muted">${M.rows.length?"이 원판에 들어가는 제품이 없습니다":"오른쪽 제품 목록에 폭·길이·수량을 넣으면 이 원판에 배열합니다"}</span></h4><div class="ppats"><div class="ppat" style="cursor:default"><div class="ph"><b>${szLab(nm,c0.W,c0.L)}</b><span class="muted">${esc(M.mat)} ${M.t}t · 1장 ${F(kgOf(M,c0.W,c0.L,1),2)} kg · 사용 영역 ${F(c0.W-2*M.m)}×${F(c0.L-2*M.m)}</span></div>${svgSheet(M,c0,[])}</div></div>`;}
+    else $("#pPats").innerHTML=M.rows.length?"":'<h4>배열도</h4><div class="muted" style="padding:30px 4px;font-size:12.5px">원판 후보를 누르면 원판 그림이, 오른쪽 제품 목록에 폭·길이·수량을 넣으면 배열도가 나옵니다.</div>';$("#pOutBot").innerHTML="";$("#pOut").innerHTML=M.rows.length?'<div class="pwarn">원판 후보 중에 제품이 들어가는 원판이 없습니다. 원판 후보를 추가하거나 회전 허용을 켜 보세요.</div>':"";return;}
   const plans={1:calc(M,pk.W,pk.L,1),2:calc(M,pk.W,pk.L,2)};
   const draw=(r3)=>{if(r3)plans[3]=r3;
     const avail=[1,2,3].filter(k=>plans[k]);
@@ -2526,7 +2530,7 @@ $("#pRows").addEventListener("input",e=>{const tr=e.target.closest("tr[data-i]")
   const ks=document.querySelector("#pRows .kgsum");if(ks)ks.textContent=F(M.rows.reduce((a,x)=>a+kgOf(M,x.w,x.l,x.q),0),1);
   if(k!=="n")compute();});
 $("#pRows").addEventListener("change",e=>{const tr=e.target.closest("tr[data-i]");if(!tr)return;if(e.target.dataset.k==="nr"){snap("결 고정 변경");P().rows[+tr.dataset.i].nr=e.target.checked?1:0;save();compute();}
-  else if(e.target.dataset.k!=="n"){renderRows();}});
+  });
 $("#pRows").addEventListener("click",e=>{const b=e.target.closest("[data-del]");if(!b)return;snap("제품 삭제");const p=P();p.rows.splice(+b.dataset.del,1);if(!p.rows.length)p.rows=[{n:"",w:"",l:"",q:"",nr:0}];save();renderRows();compute();});
 $("#pRows").addEventListener("keydown",e=>{if(e.key!=="Enter"||e.isComposing)return;const tr=e.target.closest("tr[data-i]"),k=e.target.dataset.k;if(!tr||!k)return;e.preventDefault();
   const order=["n","w","l","q"],i=+tr.dataset.i,ix=order.indexOf(k),p=P();
@@ -2710,7 +2714,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v39';
+var COIL_VER='v40';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
