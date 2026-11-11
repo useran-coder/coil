@@ -376,7 +376,17 @@ html:not(.au-mgr) .au-mgr-only{display:none!important}
 #syncChip.busy{color:var(--accent)}
 #syncChip.err{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transparent)}
 #verChip{font-size:11px;color:var(--muted)}
-#updBar{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:9000;background:var(--panel);border:1px solid var(--accent);border-radius:10px;box-shadow:var(--shadow);padding:10px 14px;display:flex;gap:10px;align-items:center;font-size:13px}
+#updBar{position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.28);display:flex;align-items:center;justify-content:center;padding:16px}
+#updBar .uc{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 50px rgba(15,23,42,.25);width:300px;max-width:100%;padding:26px 24px 20px;text-align:center}
+#updBar .ui{font-size:30px;line-height:1}
+#updBar .ut{margin-top:12px;font-size:17px;font-weight:800}
+#updBar .uv{margin-top:6px;font-size:13px;color:var(--muted)}
+#updBar .uv b{color:var(--accent)}
+#updBar .un{margin-top:4px;font-size:12px;color:var(--muted);opacity:.85}
+#updBar .ub{display:flex;gap:8px;margin-top:18px}
+#updBar .ub button{flex:1;font:inherit;font-size:13px;font-weight:700;border-radius:9px;padding:9px 0;cursor:pointer}
+#updBar #updX{border:1px solid var(--line);background:var(--panel);color:var(--muted)}
+#updBar #updGo{border:0;background:#1e3a5f;color:#fff;font-weight:800}
 @media print{#auGate,#updBar{display:none!important}}
 </style>
 <style id="coil-boot-style">
@@ -2743,7 +2753,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v43';
+var COIL_VER='v44';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
@@ -3121,12 +3131,14 @@ async function verCheck(){
     const j=await r.json(), m=/v(\d+)/.exec((j[0]&&j[0].commit&&j[0].commit.message)||''); if(!m)return;
     const latest=+m[1], mine=+COIL_VER.slice(1);
     const vc=document.getElementById('verChip'); if(vc)vc.title='GitHub 최신 v'+latest;
-    if(latest>mine&&!document.getElementById('updBar')){
+    if(latest>mine&&!document.getElementById('updBar')&&window.__updLater!==latest){
       const onWeb=/github\.io$/.test(location.hostname), b=document.createElement('div'); b.id='updBar';
-      b.innerHTML=`새 버전 <b>v${latest}</b> 이 있습니다 (지금 ${COIL_VER}). `+(onWeb?`<button class="sm pri" id="updGo">새로 고침</button>`:`<button class="sm pri" id="updGo">🌐 웹에서 열기</button>`)+` <button class="sm" id="updX">닫기</button>`;
+      b.innerHTML=`<div class="uc" role="dialog" aria-label="새 버전 있음"><div class="ui">🔄</div><div class="ut">새 버전 있음</div>
+        <div class="uv"><b>v${latest}</b> · 지금 화면 ${COIL_VER}</div><div class="un">작업 내용은 서버에 저장한 뒤 새로 고칩니다</div>
+        <div class="ub"><button type="button" id="updX">나중에</button><button type="button" id="updGo">${onWeb?'새로고침':'🌐 웹에서 열기'}</button></div></div>`;
       document.body.appendChild(b);
       document.getElementById('updGo').onclick=()=>{coilSync.flush().finally(()=>{if(onWeb)location.reload();else window.open('https://useran-coder.github.io/coil/','_blank');});};
-      document.getElementById('updX').onclick=()=>b.remove();
+      document.getElementById('updX').onclick=()=>{window.__updLater=latest;b.remove();};
     }
   }catch(e){}
 }
@@ -3152,7 +3164,8 @@ function bootWaitLink(){
     if(!auValid()){const ok=await auTryAuto();if(!ok){auApply();auShowGate();return;}}
     auApply(); coilSync.start();
   })();
-  setTimeout(verCheck,4000); setInterval(verCheck,600000);
+  setTimeout(verCheck,4000); setInterval(verCheck,300000);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(verCheck,1500);});
 })();
 </script>
 <style id="dbf-menu-v1-style">
