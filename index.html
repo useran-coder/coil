@@ -102,6 +102,11 @@ button.chip.on{background:var(--accent-soft);border-color:var(--accent);color:va
 .pchip{position:relative;display:inline-flex}
 .pchip .px{position:absolute;top:-6px;right:-6px;width:17px;height:17px;padding:0;border-radius:50%;font-size:11px;line-height:15px;text-align:center;background:var(--bad);border-color:var(--bad);color:#fff;opacity:0;transition:opacity .15s}
 .pchip:hover .px,.pchip .px:focus{opacity:1}
+/* v58 : 빠른 선택 칩이 한 줄을 넘으면 상자 크기는 그대로 두고 새 줄을 위쪽으로 쌓음 */
+.prow{display:flex;align-items:center;gap:6px;height:38px}
+#paddBox{flex:none;display:flex;align-items:center}
+#presets{height:38px;min-height:38px;width:430px;max-width:100%;flex-wrap:wrap-reverse;align-content:flex-start;position:relative;z-index:3}
+#presets .pchip{z-index:1}
 .padd{height:30px!important;width:96px;border-radius:999px!important;border-style:dashed!important;text-align:center!important;font-size:12px;padding:0 8px!important}
 .cbox{height:38px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);font-size:13px;cursor:pointer;white-space:nowrap}
 .cbox input{margin:0;width:15px;height:15px}
@@ -652,7 +657,7 @@ body:not(.mode-plate) .plate-only{display:none!important}
         <div class="cg-t">코일 폭</div>
         <div class="cg-r">
           <label class="cf">폭 (mm)<input id="mw" class="strong big2" type="number" min="100" max="2500" step="1" style="width:100px"></label>
-          <div class="cf"><span>빠른 선택</span><div class="chips" id="presets"></div></div>
+          <div class="cf"><span>빠른 선택</span><div class="prow"><div class="chips" id="presets"></div><span id="paddBox"><input id="padd" class="padd" type="number" min="100" max="2600" step="1" placeholder="＋ 폭 추가" title="폭을 입력하고 Enter"></span></div></div>
         </div>
       </div>
       <div class="cg">
@@ -1802,8 +1807,7 @@ $("#nMat").value=S.mat; $("#nT").value=S.t;
 if(!Array.isArray(S.presets))S.presets=defaults.presets.slice();
 function renderPresets(){
   S.presets=[...new Set(S.presets.map(Number).filter(w=>w>=100&&w<=2600))].sort((a,b)=>a-b);
-  $("#presets").innerHTML=S.presets.map(w=>`<span class="pchip"><button class="chip" data-w="${w}" title="클릭: 선택 · 더블클릭: 수정">${(+w).toLocaleString("ko-KR",{maximumFractionDigits:1})}</button><button class="px" data-del="${w}" title="${fw(w)} 삭제" aria-label="${fw(w)} 삭제">×</button></span>`).join("")
-    +`<input id="padd" class="padd" type="number" min="100" max="2600" step="1" placeholder="＋ 폭 추가" title="폭을 입력하고 Enter">`;
+  $("#presets").innerHTML=S.presets.map(w=>`<span class="pchip"><button class="chip" data-w="${w}" title="클릭: 선택 · 더블클릭: 수정">${(+w).toLocaleString("ko-KR",{maximumFractionDigits:1})}</button><button class="px" data-del="${w}" title="${fw(w)} 삭제" aria-label="${fw(w)} 삭제">×</button></span>`).join("");
   syncPresets();
 }
 function syncPresets(){document.querySelectorAll("#presets .chip").forEach(b=>b.classList.toggle("on",+b.dataset.w===+S.mw));}
@@ -1822,10 +1826,10 @@ $("#presets").addEventListener("dblclick",e=>{
   S.presets=S.presets.map(w=>w===old?n:w); if(S.mw===old){S.mw=n;$("#mw").value=n;refreshKeepInputs();renderManual();}
   renderPresets();save();
 });
-$("#presets").addEventListener("keydown",e=>{
+$("#paddBox").addEventListener("keydown",e=>{
   if(e.target.id!=="padd"||e.key!=="Enter")return; e.preventDefault();
   const n=+e.target.value; if(!(n>=100&&n<=2600)){alert("100~2600 사이 숫자를 입력하세요.");return;}
-  S.presets.push(n); renderPresets(); save(); $("#padd").focus();
+  S.presets.push(n); e.target.value=""; renderPresets(); save(); $("#padd").focus();
 });
 $("#mw").addEventListener("input",e=>{const v=+e.target.value;if(v>=100){S.mw=v;syncPresets();refreshKeepInputs();renderManual();}});
 $("#trim").addEventListener("input",e=>{S.trim=Math.max(0,+e.target.value||0);refreshKeepInputs();});
@@ -2810,7 +2814,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v57';
+var COIL_VER='v58';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
