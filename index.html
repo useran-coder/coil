@@ -2690,8 +2690,12 @@ function ucOpen(){const p=P();let el=$("#ucBox");
       document.querySelectorAll("#ucBox [data-uc]").forEach(b=>b.classList.toggle("on",b.dataset.uc===w+"x"+l));
       $("#ucRes").innerHTML=kg>0?`<div>장당 무게 <b>${F(kg,2)} kg</b> <span class="muted">(${F(t,2)} × ${F(w)} × ${F(l)} × 비중 ${d})</span></div><div class="ucv">kg단가 <b>${v?F(Math.round(v)):"-"}</b> 원/kg</div>`:'<div class="muted">두께·폭·길이를 넣으면 장당 무게를 계산함</div>';
       $("#ucOk").disabled=!(v>0);return {t,w,l,pr,kg,v};};
-    el.addEventListener("input",calcUC);
-    el.addEventListener("click",e=>{const b=e.target.closest("[data-uc]");if(b){const [w,l]=b.dataset.uc.split("x");$("#ucW").value=w;$("#ucL").value=l;calcUC();}});
+    /* v84 : 폭·길이·장당 구입단가에 1,000단위 쉼표 (입력 중에도, 커서 위치 유지) */
+    const comma=inp=>{const v=inp.value,pos=inp.selectionStart||0,digitsBefore=v.slice(0,pos).replace(/[^\d]/g,"").length;
+      const raw=v.replace(/[^\d]/g,"");const out=raw?Number(raw).toLocaleString("ko-KR"):"";if(out===v)return;inp.value=out;
+      let i=0,c=0;while(i<out.length&&c<digitsBefore){if(/\d/.test(out[i]))c++;i++;}try{inp.setSelectionRange(i,i);}catch(_){}};
+    el.addEventListener("input",e=>{if(["ucP","ucW","ucL"].includes(e.target.id))comma(e.target);calcUC();});
+    el.addEventListener("click",e=>{const b=e.target.closest("[data-uc]");if(b){const [w,l]=b.dataset.uc.split("x");$("#ucW").value=F(+w);$("#ucL").value=F(+l);calcUC();}});
     const close=()=>{$("#ucBox").classList.remove("on");$("#ucScrim").classList.remove("on");};
     $("#ucX").onclick=close;$("#ucNo").onclick=close;$("#ucScrim").onclick=close;
     el.addEventListener("keydown",e=>{if(e.key==="Escape"){e.stopPropagation();close();}else if(e.key==="Enter"&&!$("#ucOk").disabled){e.preventDefault();$("#ucOk").click();}});
@@ -2699,7 +2703,7 @@ function ucOpen(){const p=P();let el=$("#ucBox");
       C.msg(`판재 ${F(r.w)}×${F(r.l)} 장당 ${F(r.pr)}원 → ${F(q.price)}원/kg 적용. (↶ 취소로 되돌리기)`);};
     el._calc=calcUC;}
   const pc=p.priceCalc||{};$("#ucMat").textContent=`${p.mat||"재질 미선택"} · 비중 ${C.density(p.mat)||7.85}`;
-  $("#ucT").value=num(p.t)>0?p.t:(pc.t||"");$("#ucW").value=pc.w||1219;$("#ucL").value=pc.l||2438;$("#ucP").value=pc.sheet&&pc.v===num(p.price)?pc.sheet:"";
+  $("#ucT").value=num(p.t)>0?p.t:(pc.t||"");$("#ucW").value=F(pc.w||1219);$("#ucL").value=F(pc.l||2438);$("#ucP").value=pc.sheet&&pc.v===num(p.price)?F(pc.sheet):"";
   el._calc();el.classList.add("on");$("#ucScrim").classList.add("on");setTimeout(()=>$("#ucP").focus(),60);}
 $("#pUnitCalc").addEventListener("click",ucOpen);
 $("#pProc").addEventListener("click",e=>{const b=e.target.closest("[data-gap]");if(!b)return;snap("가공 방식 변경");const p=P();p.gap=+b.dataset.gap;p.m=+b.dataset.m;p.plan=b.textContent.trim()==="전단"?2:0;save();renderCfg();compute();});   /* v80 : 전단 → 2안 띠 배열(전단기용) 선택, 레이저·NCT → 추천(★)안 */
@@ -2916,7 +2920,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v83';
+var COIL_VER='v84';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
