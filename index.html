@@ -448,6 +448,7 @@ body:not(.mode-plate) .plate-only{display:none!important}
 .psvg-txt{fill:#111;font-weight:700;font-family:inherit}
 .resetb{margin-left:auto;font-weight:600}
 .resetb:hover{border-color:var(--bad)!important;color:var(--bad)}
+.szp{font-weight:400!important}
 .pstk .tbl-wrap{max-height:none!important;overflow:visible!important}
 .pstk{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 #platePanel .pg2{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px;align-items:start;margin-top:4px}
@@ -2123,6 +2124,8 @@ const num=v=>{const n=parseFloat(String(v==null?"":v).replace(/,/g,""));return i
 const PRE=[[1219,2438,"4×8"],[1219,3048,"4×10"],[1524,3048,"5×10"],[1250,2500,""],[1500,3000,""]];
 const COL=["#3b82f6","#f59e0b","#10b981","#ef4444","#8b5cf6","#06b6d4","#ec4899","#84cc16","#f97316","#6366f1","#14b8a6","#a855f7"];
 const colOf=i=>COL[i%COL.length];
+/* v37 : 원판 표기 «4×8 (1,219×2,438)» — 괄호 부분은 일반체 */
+const szLab=(n,W,L)=>n?`${esc(n)} <span class="szp">(${F(W)}×${F(L)})</span>`:`${F(W)}×${F(L)}`;
 const TITLE={coil:"코일 슬리팅 조합 · 발주기",plate:"판재 배열 조합 · 발주기"};
 
 function P(){const S=C.get();if(!S.plate||typeof S.plate!=="object")S.plate={};const p=S.plate;
@@ -2275,13 +2278,13 @@ function renderRows(focus){$("#pRows").innerHTML=rowsHtml();if(focus){const el=d
 function renderCfg(){const p=P();$("#pMat").value=p.mat;$("#pT").value=p.t;$("#pPrice").value=num(p.price)>0?p.price:"";$("#pM").value=p.m;$("#pGap").value=p.gap;$("#pRot").checked=!!+p.rot;$("#pCoil").checked=!!+p.coil;
   document.querySelectorAll("#pProc .chip").forEach(b=>b.classList.toggle("on",+b.dataset.gap===num(p.gap)&&+b.dataset.m===num(p.m)));
   const cur=PICK&&PICK.key;
-  $("#pSheets").innerHTML=p.sheets.map((s,i)=>{const k=num(s[0])+"x"+num(s[1]),on=cur===k;return `<span class="pchip pick${on?" on":""}" data-spick="${k}" role="button" tabindex="0" title="눌러서 이 원판으로 배열">${on?"✓ ":""}${esc(s[2]?s[2]+" ":"")}${F(s[0])}×${F(s[1])}<button type="button" data-sdel="${i}" title="원판 후보에서 빼기">×</button></span>`;}).join("")||'<span class="muted" style="font-size:12px">원판 후보가 없습니다</span>';
+  $("#pSheets").innerHTML=p.sheets.map((s,i)=>{const k=num(s[0])+"x"+num(s[1]),on=cur===k;return `<span class="pchip pick${on?" on":""}" data-spick="${k}" role="button" tabindex="0" title="눌러서 이 원판으로 배열">${on?"✓ ":""}${szLab(s[2],s[0],s[1])}<button type="button" data-sdel="${i}" title="원판 후보에서 빼기">×</button></span>`;}).join("")||'<span class="muted" style="font-size:12px">원판 후보가 없습니다</span>';
   const M=model();$("#pCoilWs").textContent="(코일 폭 "+coilWs(M).join(" · ")+")";}
 
 function renderCmp(M,cs){if(!M.rows.length){$("#pCmp").innerHTML='<div class="muted" style="padding:18px 4px">왼쪽에 제품 폭·길이·수량을 넣으면 원판별로 비교합니다.</div>';return;}
   let h=`<div class="tbl-wrap"><table class="ptbl"><thead><tr><th class="l">원판</th><th>필요 장수</th><th>원자재 소요</th><th>수율</th><th>스크랩</th><th>원자재 금액</th><th class="l">비고</th></tr></thead><tbody>`;
   cs.forEach(c=>{const y=c.raw?c.net/c.raw*100:0,on=PICK&&PICK.key===c.key;
-    h+=`<tr class="cand${on?" pick":""}" data-key="${c.key}"><td class="l">${on?"▶ ":""}${esc(c.name?c.name+" ":"")}${F(c.W)}×${F(c.L)}${c.best?'<span class="ptag best">★ 최소</span>':""}${c.kind==="coil"?'<span class="ptag coil">코일</span>':""}</td>
+    h+=`<tr class="cand${on?" pick":""}" data-key="${c.key}"><td class="l">${on?"▶ ":""}${szLab(c.name,c.W,c.L)}${c.best?'<span class="ptag best">★ 최소</span>':""}${c.kind==="coil"?'<span class="ptag coil">코일</span>':""}</td>
       <td>${c.n?F(c.n)+" 장":"-"}</td><td>${c.n?F(c.raw,1)+" kg":"-"}</td><td style="font-weight:700;color:${y>=80?"var(--ok)":y>=70?"var(--ink)":"var(--bad)"}">${c.n?F(y,1)+"%":"-"}</td>
       <td>${c.n?F(c.raw-c.net,1)+" kg":"-"}</td><td>${c.amt?F(c.amt)+" 원":"-"}</td>
       <td class="l" style="font-size:11.5px">${c.big.length?`<span style="color:var(--bad)">${c.big.length}품목 원판보다 큼</span>`:""}${c.left.length?`<span style="color:var(--bad)"> 못 놓은 ${c.left.length}개</span>`:""}${c.kind==="coil"&&c.stock?`<span class="ptag stk">재고 ${F(c.stock)}kg</span>`:""}${c.pin?`<span class="ptag stk">판재 재고 ${F(c.pstock)}장</span>`:""}</td></tr>`;});
@@ -2306,7 +2309,7 @@ function renderOut(M,pk){
     const plan=plans[M.p.plan]?M.p.plan:rec,c=plans[plan];
     PICK=Object.assign({},pk,c,{name:pk.name,kind:pk.kind,key:pk.key,price:pk.price,amt:c.raw*pk.price,stock:pk.stock,pin:pk.pin,pstock:pk.pstock,plan});
     const NM={1:"1안 자유 배열",2:"2안 띠 배열 (전단기용)",3:"3안 혼합 최적"};
-    let h=`<h4>${esc(M.mat)} ${M.t}t · ${esc(pk.name?pk.name+" ":"")}${F(pk.W)}×${F(pk.L)} 배열 ${pk.kind==="coil"?'<span class="ptag coil">코일 절단</span>':""}<span class="muted">가장자리 여유 ${F(M.m)} · 제품 간격 ${F(M.gap)} · 회전 ${M.rot?"허용":"안 함"}</span></h4><div class="pplans">`;
+    let h=`<h4>${esc(M.mat)} ${M.t}t · ${szLab(pk.name,pk.W,pk.L)} 배열 ${pk.kind==="coil"?'<span class="ptag coil">코일 절단</span>':""}<span class="muted">가장자리 여유 ${F(M.m)} · 제품 간격 ${F(M.gap)} · 회전 ${M.rot?"허용":"안 함"}</span></h4><div class="pplans">`;
     [1,2,3].forEach(k=>{const q=plans[k];
       h+=`<button type="button" class="pplan${k===plan?" on":""}" data-plan="${k}"${q?"":" disabled"}><b>${NM[k]}${k===rec?" ★":""}</b>${q?`<span>${F(q.n)}장 · 수율 ${F(q.raw?q.net/q.raw*100:0,1)}%</span><small>배열 ${nPat(q)}가지${q.left.length?` · 못 놓은 ${q.left.length}개`:""}</small>`:"<span>계산 중…</span><small>&nbsp;</small>"}</button>`;});
     h+=`</div>`;
@@ -2644,7 +2647,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v36';
+var COIL_VER='v37';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
