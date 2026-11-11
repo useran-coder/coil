@@ -326,7 +326,7 @@ td input[data-num]{width:96px}
 #nstep svg{width:9px;height:9px;pointer-events:none}
 button:disabled{opacity:.45;cursor:default;pointer-events:none}
 
-#hdrLogo{width:30px;height:30px;object-fit:contain;margin-left:6px;flex:none}
+#hdrLogo{width:36px;height:36px;object-fit:contain;margin-right:8px;flex:none}
 #hdrLogo:not([src]){display:none}
 .svb{margin-left:auto;font-weight:600}
 .svb+.resetb{margin-left:6px}
@@ -555,7 +555,7 @@ body:not(.mode-plate) .plate-only{display:none!important}
 </script>
 
 <header class="top no-print">
-  <div class="modewrap"><button type="button" id="modeBtn" class="modebtn" aria-haspopup="menu" aria-expanded="false" title="코일 / 판재 화면 바꾸기"><h1 id="appTitle">코일 슬리팅 조합 · 발주기</h1><span class="mtag" id="modeTag">코일</span><span class="caret">▾</span></button><img id="hdrLogo" alt="동방파스텍" aria-hidden="true"><script>(function(){var b=document.getElementById('bootCiV1039'),h=document.getElementById('hdrLogo');if(b&&h)h.src=b.src;})();</script>
+  <div class="modewrap"><img id="hdrLogo" alt="동방파스텍" aria-hidden="true"><script>(function(){var b=document.getElementById('bootCiV1039'),h=document.getElementById('hdrLogo');if(b&&h)h.src=b.src;})();</script><button type="button" id="modeBtn" class="modebtn" aria-haspopup="menu" aria-expanded="false" title="코일 / 판재 화면 바꾸기"><h1 id="appTitle">코일 슬리팅 조합 · 발주기</h1><span class="mtag" id="modeTag">코일</span><span class="caret">▾</span></button>
     <div class="modemenu" id="modeMenu" role="menu" hidden>
       <button type="button" role="menuitemradio" data-mode="coil"><span class="mi">🌀</span><span><b>코일</b><small>슬리팅 조합 · 코일 발주</small></span></button>
       <button type="button" role="menuitemradio" data-mode="plate"><span class="mi">▦</span><span><b>판재</b><small>원판 배열 · 판재 발주</small></span></button>
@@ -2743,7 +2743,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v42';
+var COIL_VER='v43';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
