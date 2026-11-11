@@ -387,6 +387,11 @@ body:has(#bootWait:not(.out)) .dbfm-btn{visibility:hidden!important}
 @media (max-width:640px){.ci3dV1307{--s:102px}}
 @media (prefers-reduced-motion:reduce){.ci3dV1307 .c3Coin{animation-duration:8s}.ci3dV1307 .c3F::after{display:none}}
 </style>
+<style id="v1039-ci-style">
+#bootWait .ciSpinV1039,.ciSpinV1039{display:block;width:132px;height:132px;margin:0 auto 18px;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 6px 14px rgba(30,58,95,.16));animation:ciFadeV1039 .45s ease both}
+@keyframes ciFadeV1039{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (max-width:640px){.ciSpinV1039{width:102px;height:102px;margin-bottom:13px}}
+</style>
 <script id="v1307-ci3d-js">
 window.ci3dV1307=function(id,cls,size){
   var T=.11,N=12,L='';
@@ -401,7 +406,7 @@ window.ci3dV1307=function(id,cls,size){
 
 </head>
 <body>
-<div id="bootWait" style="position:fixed;inset:0;z-index:100000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:#f8fafc;border:0;box-shadow:none"><script>document.write(window.ci3dV1307("bootCiV1039",""));</script><div id="bootPctNum" style="font-size:54px;line-height:1;font-weight:900;color:#1e3a5f;letter-spacing:-.03em;font-variant-numeric:tabular-nums">0<span style="font-size:30px">%</span></div><div style="height:9px;width:260px;margin:16px auto 0;background:#e2e8f0;border-radius:6px;overflow:hidden"><div id="bootBar" style="height:100%;width:0%;background:linear-gradient(90deg,#1e3a5f,#3b82f6);border-radius:6px;transition:width .25s ease"></div></div><div id="bootMsg" style="margin-top:11px;font-size:13px;font-weight:700;color:#64748b">화면을 준비하는 중입니다</div><div id="bootStepsV1179" style="margin-top:14px;font-size:12px;color:#94a3b8;line-height:1.8;text-align:left">⏳ 이 PC 자료 열기<br>○ 로그인 확인<br>○ 서버 작업 내용 받기<br>○ 매입·매출·재고 연동 확인</div></div>
+<div id="bootWait" style="position:fixed;inset:0;z-index:100000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:#f8fafc;border:0;box-shadow:none"><script>document.write(window.ci3dV1307("bootCiV1039","ciSpinV1039"));</script><div id="bootPctNum" style="font-size:54px;line-height:1;font-weight:900;color:#1e3a5f;letter-spacing:-.03em;font-variant-numeric:tabular-nums">0<span style="font-size:30px">%</span></div><div style="height:9px;width:260px;margin:16px auto 0;background:#e2e8f0;border-radius:6px;overflow:hidden"><div id="bootBar" style="height:100%;width:0%;background:linear-gradient(90deg,#1e3a5f,#3b82f6);border-radius:6px;transition:width .25s ease"></div></div><div id="bootMsg" style="margin-top:11px;font-size:13px;font-weight:700;color:#64748b">화면을 준비하는 중입니다</div><div id="bootStepsV1179" style="margin-top:14px;font-size:12px;color:#94a3b8;line-height:1.8;text-align:left">⏳ 이 PC 자료 열기<br>○ 로그인 확인<br>○ 서버 작업 내용 받기<br>○ 매입·매출·재고 연동 확인</div></div>
 <script id="coil-boot-progress">
 /* 단계가 끝날 때마다 목표 %를 올리고, 그 사이는 숫자가 천천히 차오름. 모두 끝나면 100%를 찍고 사라짐 */
 (function(){
@@ -2012,7 +2017,7 @@ window.__coil={
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v22';
+var COIL_VER='v23';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
