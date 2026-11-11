@@ -670,13 +670,6 @@ body:not(.mode-plate) .plate-only{display:none!important}
     </div>
   </div>
 
-  <div class="pg">
-    <div><div class="pstk" id="pStk"></div></div>
-    <div>
-      <h4>원판별 비교 <span class="muted">줄을 누르면 그 원판으로 배열도를 봅니다</span></h4>
-      <div id="pCmp"></div>
-    </div>
-  </div>
   <div id="pOut" style="margin-top:16px"></div>
   <div class="pg2">
     <div><div id="pPats"></div></div>
@@ -700,6 +693,13 @@ body:not(.mode-plate) .plate-only{display:none!important}
     </div>
   </div>
   <div id="pOutBot"></div>
+  <div class="pg" style="margin-top:18px">
+    <div><div class="pstk" id="pStk"></div></div>
+    <div>
+      <h4>원판별 비교 <span class="muted">줄을 누르면 그 원판으로 배열도를 봅니다</span></h4>
+      <div id="pCmp"></div>
+    </div>
+  </div>
 </section>
 <div class="pscrim no-print" id="pScrim"></div>
 <aside class="pdrawer no-print" id="pDrawer" aria-hidden="true" role="dialog" aria-label="배열도 상세">
@@ -2642,7 +2642,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v33';
+var COIL_VER='v34';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
