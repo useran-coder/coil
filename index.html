@@ -187,6 +187,8 @@ td input[data-num]{width:64px;padding:3px 6px}
 .stat.prodc .k span{font-weight:400;font-size:11px}
 .stat.prodc .v{color:var(--accent)}
 .stat .s{font-size:11.5px;color:var(--muted)}
+.stat .s.amt{font-size:13px;color:var(--ink);font-weight:600;margin-top:2px;white-space:nowrap}
+.stat .s.amt small{font-size:11px;color:var(--muted);font-weight:400}
 .drawer .dt th{white-space:normal;line-height:1.25}
 .drawer .dt.sum td{white-space:normal}
 .mth{display:block;font-size:10px;color:var(--warn)}
@@ -1586,9 +1588,15 @@ const inView=g=>S.tab==="auto"?!g.manual:g.cid===S.tab;
 function renderStats(){
   const sum=gs=>{let coils=0,wt=0,used=0,total=0,slits=0;gs.forEach(g=>g.patterns.forEach(p=>{coils+=p.rep;wt+=p.rep*g.weight;used+=p.used*p.rep;total+=p.mw*p.rep;slits+=p.lanes.length*p.rep;}));return {coils,wt,used,total,slits};};
   const v=sum(plan.filter(inView)), a=sum(plan), cc=curCoil(), lab=cc?`코일 ${S.coils.indexOf(cc)+1}`:"자동 조합";
-  const cards=[[`${lab} 코일 발주`,fmt(v.coils)+" 본"],["발주중량",fmt(v.wt/1000,2)+" ton"],["슬릿코일 생산",fmt(v.slits)+" 본"],
-    ["평균 수율",v.total?(v.used/v.total*100).toFixed(1)+" %":"-"],["예상 트림 스크랩",fmt(v.total?v.wt*(1-v.used/v.total):0)+" kg"]];
-  let h=cards.map(([k,x])=>`<div class="stat"><div class="k">${k}</div><div class="v">${x}</div></div>`).join("");
+  /* v54 : 금액 = 중량 × 단가(원/kg). 단가는 규격(재질·두께)마다 — 코일 화면에 직접 넣은 단가 → 마지막 입고 단가 → 단가표 */
+  const unitOf=key=>{const [m,t]=key.split("|");if(+S.price>0&&specKey(S.mat,S.t)===specKey(m,t))return +S.price;
+    try{const ap=window.__plate&&window.__plate.autoPrice&&window.__plate.autoPrice(m,+t,"코일");return ap&&ap.v>0?ap.v:0;}catch(e){return 0;}};
+  let amt=0,scrAmt=0,noP=0;const units=new Set();
+  plan.filter(inView).forEach(g=>{const u=unitOf(g.key);g.patterns.forEach(p=>{const kg=p.rep*g.weight,sk=p.mw?kg*(1-p.used/p.mw):0;if(u>0){amt+=kg*u;scrAmt+=sk*u;units.add(Math.round(u));}else if(kg>0)noP++;});});
+  const at=units.size===1?` <small>@${fmt([...units][0])}</small>`:"", miss=noP?" <small>일부 단가 없음</small>":"";
+  const cards=[[`${lab} 코일 발주`,fmt(v.coils)+" 본"],["발주중량",fmt(v.wt/1000,2)+" ton",v.wt>0&&amt>0?`${fmt(Math.round(amt))} 원${at}${miss}`:v.wt>0?"단가 없음":""],["슬릿코일 생산",fmt(v.slits)+" 본"],
+    ["평균 수율",v.total?(v.used/v.total*100).toFixed(1)+" %":"-"],["예상 트림 스크랩",fmt(v.total?v.wt*(1-v.used/v.total):0)+" kg",v.wt>0&&scrAmt>0?`${fmt(Math.round(scrAmt))} 원 <small>원자재값</small>`:""]];
+  let h=cards.map(([k,x,sub])=>`<div class="stat"><div class="k">${k}</div><div class="v">${x}</div>${sub?`<div class="s amt">${sub}</div>`:""}</div>`).join("");
   // 생산 가능 제품 카드 (클릭 → 오른쪽 상세)
   const pp=prodPlan();
   h+=`<button type="button" class="stat prodc" id="prodCard" title="클릭하면 제품별 상세가 열립니다"><div class="k">생산 가능 제품 <span>자세히 ›</span></div>
@@ -2664,7 +2672,7 @@ function xlsx(){if(typeof XLSX==="undefined"){alert("엑셀 저장 기능을 불
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"발주서");XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a2),"제품목록");XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a3),"배열상세");
   XLSX.writeFile(wb,`판재발주_${String(H.supplier||"").replace(/[\\/:*?"<>|]/g,"")}_${H.date||new Date().toISOString().slice(0,10)}.xlsx`);}
 
-window.__plate={sheet:sheetHtml,text,xlsx,undo,
+window.__plate={sheet:sheetHtml,text,xlsx,undo,autoPrice,
   /* v42 : 저장본 불러오기 */
   load(d,label){snap(label||"저장본 불러오기");C.get().plate=JSON.parse(JSON.stringify(d||{}));save();closePD();PICK=null;renderAll();}};
 /* v52 : 코일 화면 단가(원/kg) — 판재와 같은 방식(마지막 입고 단가, 코일 입고 우선) */
@@ -2796,7 +2804,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v53';
+var COIL_VER='v54';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
