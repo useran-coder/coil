@@ -466,6 +466,7 @@ body:not(.mode-plate) .plate-only{display:none!important}
 .pchip button{border:none!important;background:none!important;padding:0 4px!important;color:var(--muted);font-size:13px;line-height:1}
 .pchip button:hover{color:var(--bad)}
 .pplans{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 12px}
+#pPlanBox h4{margin:0 0 6px}#pPlanBox .pplans{margin:4px 0 16px}#pPlanBox .pplan{flex:1 1 0;min-width:140px}
 .pplan{border:1px solid var(--line);border-radius:9px;padding:8px 12px;min-width:150px;text-align:left;background:var(--panel)}
 .pplan b{display:block;font-size:13px}
 .pplan span{display:block;font-size:12.5px}
@@ -742,6 +743,7 @@ html{scrollbar-gutter:stable}
   <div class="pg2">
     <div><div id="pPats"></div></div>
     <div>
+      <div id="pPlanBox"></div>
       <h4>제품 목록 <span class="muted">Enter → 다음 칸 · 마지막 칸에서 Enter → 줄 추가 · 「결 고정」은 제품 길이를 원판 길이 방향(압연 방향)으로만 놓음</span></h4>
       <div class="tbl-wrap">
         <table class="ptbl" id="pRowsT"><thead><tr><th class="c">No</th><th class="l">품명</th><th>폭 (mm)</th><th>길이 (mm)</th><th>수량 (개)</th><th class="c" title="체크하면 이 제품은 돌려 놓지 않음">결 고정</th><th>중량 (kg)</th><th></th></tr></thead>
@@ -2411,14 +2413,14 @@ function renderCmp(M,cs){if(!M.rows.length){$("#pCmp").innerHTML='<div class="mu
 let calcT=0,lateT=0;
 function compute(){clearTimeout(calcT);calcT=setTimeout(computeNow,250);}
 function computeNow(){if(C.get().mode!=="plate")return;const M=model();
-  if(!(M.t>0)||!M.mat){renderStk(M);["#pOut","#pPats","#pOutBot"].forEach(k=>{const e=$(k);if(e)e.innerHTML="";});const pc=$("#pCmp");if(pc)pc.innerHTML='<div class="pnote">원자재 재질과 두께(mm)를 입력하면 원판별로 비교함.</div>';PICK=null;return;}
-  if(M.rows.reduce((a,r)=>a+r.q,0)>30000){$("#pCmp").innerHTML='<div class="pwarn">제품 수량 합계가 30,000개를 넘어 계산하지 않음. 수량을 나눠서 넣어 주세요.</div>';$("#pOut").innerHTML="";PICK=null;return;}
+  if(!(M.t>0)||!M.mat){renderStk(M);["#pOut","#pPats","#pOutBot","#pPlanBox"].forEach(k=>{const e=$(k);if(e)e.innerHTML="";});const pc=$("#pCmp");if(pc)pc.innerHTML='<div class="pnote">원자재 재질과 두께(mm)를 입력하면 원판별로 비교함.</div>';PICK=null;return;}
+  if(M.rows.reduce((a,r)=>a+r.q,0)>30000){$("#pCmp").innerHTML='<div class="pwarn">제품 수량 합계가 30,000개를 넘어 계산하지 않음. 수량을 나눠서 넣어 주세요.</div>';$("#pOut").innerHTML="";$("#pPlanBox").innerHTML="";PICK=null;return;}
   const cs=M.rows.length?candidates(M):[];
   let pk=cs.find(c=>c.key===M.p.pick)||cs.find(c=>c.best)||cs.find(c=>c.n)||null;
   PICK=pk?Object.assign({},pk):null;
   renderCmp(M,cs);renderOut(M,pk);renderCfg();renderStk(M);if(PD.open)drawPD();}
 function renderOut(M,pk){
-  if(!pk){const pkS=String(M.p.pick||"").split("x").map(Number);
+  if(!pk){$("#pPlanBox").innerHTML="";const pkS=String(M.p.pick||"").split("x").map(Number);
     /* v40 : 제품이 없어도 원판 후보를 누르면 빈 원판 그림을 보여 줌 */
     if(pkS.length===2&&pkS[0]>0&&pkS[1]>0){const sh=M.p.sheets.find(x=>+x[0]===pkS[0]&&+x[1]===pkS[1]),c0={W:pkS[0],L:pkS[1]},nm=sh?sh[2]:"";
       $("#pPats").innerHTML=`<h4>배열도 <span class="muted">${M.rows.length?"이 원판에 들어가는 제품이 없음":"오른쪽 제품 목록에 폭·길이·수량을 넣으면 이 원판에 배열함"}</span></h4><div class="ppats"><div class="ppat" style="cursor:default"><div class="ph"><b>${szLab(nm,c0.W,c0.L)}</b><span class="muted">${esc(M.mat)} ${M.t}t · 1장 ${F(kgOf(M,c0.W,c0.L,1),2)} kg · 사용 영역 ${F(c0.W-2*M.m)}×${F(c0.L-2*M.m)}</span></div>${svgSheet(M,c0,[])}</div></div>`;}
@@ -2434,7 +2436,7 @@ function renderOut(M,pk){
     let h=`<h4>${esc(M.mat)} ${M.t}t · ${szLab(pk.name,pk.W,pk.L)} 배열 ${pk.kind==="coil"?'<span class="ptag coil">코일 절단</span>':""}<span class="muted">가장자리 여유 ${F(M.m)} · 제품 간격 ${F(M.gap)} · 회전 ${M.rot?"허용":"안 함"}</span></h4><div class="pplans">`;
     [1,2,3].forEach(k=>{const q=plans[k];
       h+=`<button type="button" class="pplan${k===plan?" on":""}" data-plan="${k}"${q?"":" disabled"}><b>${NM[k]}${k===rec?" ★":""}</b>${q?`<span>${F(q.n)}장 · 수율 ${F(q.raw?q.net/q.raw*100:0,1)}%</span><small>배열 ${nPat(q)}가지${q.left.length?` · 못 놓은 ${q.left.length}개`:""}</small>`:"<span>계산 중…</span><small>&nbsp;</small>"}</button>`;});
-    h+=`</div>`;
+    h+=`</div>`;$("#pPlanBox").innerHTML=h;h="";   /* v75 : 배열 제목·1·2·3안 카드는 제품 목록 위로 */
     const y=c.raw?c.net/c.raw*100:0,pats=patterns(c),lastUse=c.sheets.length?patInfo(M,c,c.sheets[c.sheets.length-1]).use:0;
     /* v56 : 무게 카드 아래줄에 금액(무게 × 원자재 단가) */
     const AM=kg=>pk.price>0?`<div class="s">${F(Math.round(kg*pk.price))} <small>원</small></div>`:"";
@@ -2659,7 +2661,7 @@ $("#pAdd").addEventListener("click",()=>{const w=num($("#pAddW").value),l=num($(
   const p=P();$("#pAddW").value="";$("#pAddL").value="";if(p.sheets.some(s=>+s[0]===w&&+s[1]===l)){pickSheet(w+"x"+l);return;}snap("원판 추가");p.sheets.push([w,l,""]);p.pick=w+"x"+l;p.plan=0;save();computeNow();C.msg(`원판 ${F(w)}×${F(l)} 을(를) 추가하고 이 원판으로 배열함.`);});
 ["#pAddW","#pAddL"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();if(id==="#pAddW"&&!num($("#pAddL").value)){$("#pAddL").focus();return;}$("#pAdd").click();}}));
 $("#pCmp").addEventListener("click",e=>{const tr=e.target.closest("tr.cand");if(!tr)return;P().pick=tr.dataset.key;P().plan=0;save();compute();});
-$("#pOut").addEventListener("click",e=>{const b=e.target.closest("[data-plan]");if(!b||b.disabled)return;P().plan=+b.dataset.plan;save();compute();});
+["#pOut","#pPlanBox"].forEach(id=>$(id).addEventListener("click",e=>{const b=e.target.closest("[data-plan]");if(!b||b.disabled)return;P().plan=+b.dataset.plan;save();compute();}));
 let typing=null;
 $("#pRows").addEventListener("focusin",e=>{const tr=e.target.closest("tr[data-i]");if(tr&&e.target.dataset.k&&e.target.type!=="checkbox"){const i=+tr.dataset.i;if(!typing||typing.i!==i||typing.k!==e.target.dataset.k){typing={i,k:e.target.dataset.k};snap("제품 입력");}}});
 $("#pRows").addEventListener("input",e=>{const tr=e.target.closest("tr[data-i]"),k=e.target.dataset.k;if(!tr||!k||k==="nr")return;const r=P().rows[+tr.dataset.i];if(!r)return;
@@ -2864,7 +2866,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v74';
+var COIL_VER='v75';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
