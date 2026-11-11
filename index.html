@@ -87,6 +87,7 @@ button.chip.on{background:var(--accent-soft);border-color:var(--accent);color:va
 /* 상단 설정 그룹 */
 .cfg{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px}
 /* v55 : 코일 화면 3칸(원자재 규격·코일 폭·슬리팅 조건)은 넓은 화면에서 한 줄 — 모자라면 코일 폭 칸의 빠른 선택 칩이 줄바꿈 */
+@media (min-width:1280px){#plateCfg{flex-wrap:nowrap;align-items:stretch}#plateCfg>.cg{flex:0 0 auto}#plateCfg>.cg:last-child{flex:1 1 0;min-width:0}#plateCfg>.cg:last-child .pchips{flex-wrap:wrap;max-width:100%}#plateCfg>.cg:last-child .cg-r{min-width:0}}
 @media (min-width:1280px){#coilCfg{flex-wrap:nowrap}#coilCfg>.cg{flex:0 0 auto}#coilCfg>.cg.cw{flex:0 1 auto;min-width:0}#coilCfg>.cg.cw .cg-r{flex-wrap:nowrap;align-items:flex-start}#coilCfg>.cg.cw .cf:first-child{flex:none}#coilCfg>.cg.cw .cf{min-width:0}#coilCfg>.cg.cw .cf:last-child{flex:1 1 auto}}
 .cg{border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:8px 12px 10px}
 .cg-t{font-size:11.5px;font-weight:700;color:var(--accent);margin-bottom:6px;letter-spacing:.02em}
@@ -699,7 +700,7 @@ body:not(.mode-plate) .plate-only{display:none!important}
 <section class="panel no-print plate-only" id="platePanel">
   <h2><span class="num">1</span>판재(원판) 배열 · 원자재 산출
     <span class="muted" style="font-weight:400;font-size:12px">제품(폭×길이×수량)을 넣으면 표준 원판과 코일 절단 판재를 비교해 필요한 장수·수율·원자재 무게·금액과 배열도를 보여 줍니다</span><button type="button" class="sm svb" data-sv="plate" title="지금 판재 조합을 이름 붙여 저장 · 저장 목록/보관함 보기 (모든 사용자와 공유)">💾 저장 · 목록</button><button type="button" class="sm resetb" id="plateReset" title="제품 목록·선택한 원판·배열안을 비웁니다 (↶ 취소로 되돌리기)">⟲ 초기화</button></h2>
-  <div class="cfg">
+  <div class="cfg" id="plateCfg">
     <div class="cg">
       <div class="cg-t">원자재 규격</div>
       <div class="cg-r">
@@ -721,7 +722,7 @@ body:not(.mode-plate) .plate-only{display:none!important}
       </div>
     </div>
     <div class="cg">
-      <div class="cg-t">원판 후보</div>
+      <div class="cg-t">원판 후보</div><!--pc-->
       <div class="cg-r" style="flex-direction:column;align-items:flex-start;gap:8px">
         <div class="pchips" id="pSheets"></div>
         <div class="pchips">
@@ -2818,7 +2819,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v66';
+var COIL_VER='v67';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
