@@ -352,6 +352,7 @@ button:disabled{opacity:.45;cursor:default;pointer-events:none}
 .svform{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel,transparent)}
 .svform input{flex:1 1 220px;min-width:0;padding:6px 8px}
 .svtabs{display:flex;gap:6px;margin:14px 0 8px;align-items:center;flex-wrap:wrap}
+.svkinds{display:flex;gap:6px;margin:12px 0 0;align-items:center;flex-wrap:wrap}.svkinds button.on{background:var(--accent);color:#fff;border-color:var(--accent)!important;font-weight:700}
 .svtabs button.on{background:var(--accent-soft)!important;color:var(--accent);border-color:var(--accent)!important;font-weight:700}
 .svtabs input{margin-left:auto;padding:4px 8px;width:160px}
 .svlist{display:flex;flex-direction:column;gap:6px}
@@ -2880,7 +2881,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v80';
+var COIL_VER='v81';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
@@ -2915,16 +2916,19 @@ function auMask(s){try{s=String(s||'');const k='dbps@2026#au';let o='';for(let i
 function auUnmask(s){try{const t=decodeURIComponent(escape(atob(String(s||''))));const k='dbps@2026#au';let o='';for(let i=0;i<t.length;i++)o+=String.fromCharCode(t.charCodeAt(i)^k.charCodeAt(i%k.length));return o;}catch(e){return '';}}
 function auRestore(){const v=auLsGet('dpt_auth_v1');if(v&&typeof v==='object')AU=Object.assign(AU,v);}
 function auPersist(keep){auLsSet('dpt_auth_v1',keep===false?null:{token:AU.token,id:AU.id,name:AU.name,role:AU.role,exp:AU.exp});}
-async function auCall(payload,timeoutMs){
+async function auCall(payload,timeoutMs,_try){   /* v81 : 서버 잠금(retryable)이면 잠깐 뒤 2번까지 다시 시도 · 기본 대기 60초 */
+  try{return await auCall0(payload,timeoutMs);}catch(e){if(e.retry&&(_try||0)<2){await new Promise(r=>setTimeout(r,e.retryMs||1500));return auCall(payload,timeoutMs,(_try||0)+1);}throw e;}
+}
+async function auCall0(payload,timeoutMs){
   payload.key=auKey(); if(AU.token&&!payload.token)payload.token=AU.token;
-  const ctl=new AbortController(), timer=setTimeout(()=>{try{ctl.abort();}catch(e){}},timeoutMs||30000);
+  const ctl=new AbortController(), timer=setTimeout(()=>{try{ctl.abort();}catch(e){}},timeoutMs||60000);
   let r;
   try{r=await fetch(auUrl(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload),signal:ctl.signal});}
   catch(e){throw new Error(e&&e.name==='AbortError'?'서버가 응답하지 않음(시간 초과)':'서버에 연결하지 못함 — '+(e.message||e));}
   finally{clearTimeout(timer);}
   const tx=await r.text(); let d;
   try{d=JSON.parse(tx);}catch(e){throw new Error('서버 응답을 읽지 못함 (HTTP '+r.status+')');}
-  if(d&&d.error){const er=new Error(d.error);er.auth=!!d.authError||/세션\s*만료|로그인이\s*필요|토큰|unauthorized|expired/i.test(d.error);throw er;}
+  if(d&&d.error){const er=new Error(d.error);er.retry=!!d.retryable;er.retryMs=+d.retryAfterMs||1500;er.auth=!!d.authError||/세션\s*만료|로그인이\s*필요|토큰|unauthorized|expired/i.test(d.error);throw er;}
   return d;
 }
 async function auTryAuto(){
@@ -3043,11 +3047,11 @@ const coilSync=(function(){
     if(!auValid()||busy)return;
     busy=true; chip('busy','☁ 받는 중…');
     try{
-      const d=await auCall({action:'get',fields:NS,rev:force?'':rev});
+      const d=await auCall({action:'get',fields:NS,rev:force?'':rev},60000);
       if(d.revision!=null)rev=String(d.revision);
       if(d.unchanged){lastErr='';chip('ok','☁ 동기화됨 '+hhmm(lastAt||Date.now()));return;}
       const root=(d.data&&d.data[NS])||{}, e=root.users&&root.users[uid()];
-      try{window.__coilShared&&window.__coilShared.fromServer(root.shared);}catch(_){}
+      try{if(d.data&&typeof d.data==='object')window.__coilShared&&window.__coilShared.fromServer(root.shared,d.revision);}catch(_){}
       if(meta.uid&&meta.uid!==uid()){meta={};}   // 다른 아이디로 바뀐 PC → 서버 기준으로 다시 맞춤
       if(!e){ready=true; dirty=true; lastErr=''; busy=false; await push(); return;}   // 서버에 아직 없음 → 이 PC 내용을 처음 올림
       if(e.at===meta.srvAt&&!force){ready=true;lastErr='';lastAt=Date.now();chip('ok','☁ 동기화됨 '+hhmm(lastAt));return;}
@@ -3080,7 +3084,7 @@ const coilSync=(function(){
     const at=Date.now(), entry={at,by:AU.name||AU.id,dev:devId(),ver:COIL_VER,json:JSON.stringify(snapshot())};
     const users={}; users[uid()]=entry;
     try{
-      const d=await auCall({action:'save',clientBuild:'9999',clientApp:'coil_order',clientId:(AU.name||AU.id),fields:NS,data:{[NS]:{users}}},40000);
+      const d=await auCall({action:'save',clientBuild:'9999',clientApp:'coil_order',clientId:(AU.name||AU.id),fields:NS,data:{[NS]:{users}}},90000);
       if(d.revision!=null)rev=String(d.revision);
       meta.srvAt=at; metaSave(); dirty=false; lastErr=''; lastAt=Date.now();
       try{const r=d.data&&d.data[NS];if(r)window.__coilShared&&window.__coilShared.fromServer(r.shared);}catch(_){}
@@ -3122,7 +3126,7 @@ const coilSync=(function(){
 const coilShared=(function(){
   const NS='coilOrderV1', LC='coilSharedV1', LP='coilSharedPendV1', LCUR='coilSharedCurV1';
   let cache=(auLsGet(LC)||{}).items||{}, pend=auLsGet(LP)||{}, recent={}, cur=auLsGet(LCUR)||{};
-  let inflight=false, retryT=0, lastSync=0, lastErr='', ui={kind:'coil',tab:'list',q:''}, fetching=false;
+  let inflight=false, retryT=0, lastSync=0, lastErr='', ui={kind:'coil',tab:'list',q:''}, fetching=false, srev='', lastOk=0, pollS=0;
   const $=id=>document.getElementById(id);
   const esc=auEsc, now=()=>Date.now();
   const F=n=>(+n||0).toLocaleString('ko-KR');
@@ -3136,7 +3140,8 @@ const coilShared=(function(){
     Object.keys(pend).forEach(id=>lay(id,pend[id]));
     return out;
   }
-  function fromServer(sh){
+  function fromServer(sh,rv){
+    if(rv!=null)srev=String(rv);lastOk=now();
     if(!sh||typeof sh!=='object')sh={};
     const c={}; Object.keys(sh).forEach(k=>{const e=sh[k];if(e&&typeof e==='object'&&e.id)c[k]=e;});
     cache=c; lastSync=now(); lastErr='';
@@ -3144,10 +3149,11 @@ const coilShared=(function(){
     Object.keys(recent).forEach(id=>{const r=recent[id],sv=cache[id];if(r.v===null?!sv||(+sv.upd||0)>r.t:sv&&(+sv.upd||0)>=r.t)delete recent[id];});
     persist(); render();
   }
-  async function fetchNow(){
-    if(!auValid()||fetching)return; fetching=true; render();
-    try{const d=await auCall({action:'get',fields:NS});fromServer(((d.data||{})[NS]||{}).shared);}
-    catch(e){lastErr=e.message||String(e);}
+  async function fetchNow(quiet){
+    if(!auValid()||fetching)return; fetching=true; if(!quiet)render();
+    try{const d=await auCall({action:'get',fields:NS,rev:quiet?srev:''},60000);
+      if(d.unchanged){lastOk=lastSync=now();lastErr='';}else if(d.data&&typeof d.data==='object')fromServer(((d.data||{})[NS]||{}).shared,d.revision);}
+    catch(e){lastErr=e.message||String(e);if(e.auth&&await auTryAuto()){auApply();fetching=false;return fetchNow(quiet);}}
     finally{fetching=false;render();}
     flush();
   }
@@ -3160,13 +3166,14 @@ const coilShared=(function(){
     Object.keys(sent).forEach(id=>shared[id]=sent[id].v);
     render();
     try{
-      const d=await auCall({action:'save',clientBuild:'9999',clientApp:'coil_order',clientId:(AU.name||AU.id),fields:NS,data:{[NS]:{shared}}},40000);
+      const d=await auCall({action:'save',clientBuild:'9999',clientApp:'coil_order',clientId:(AU.name||AU.id),fields:NS,data:{[NS]:{shared}}},90000);
       Object.keys(sent).forEach(id=>{if(pend[id]&&pend[id].t===sent[id].t){recent[id]=pend[id];delete pend[id];}});
-      const r=d&&d.data&&d.data[NS]; if(r)fromServer(r.shared); else {persist();render();}
+      lastErr='';const r=d&&d.data&&d.data[NS]; if(r)fromServer(r.shared,d.revision); else {persist();render();}
+      try{new BroadcastChannel('coilOrderTabV1').postMessage({t:'shared',id:'x'});}catch(_){}
     }catch(e){
       lastErr=e.message||String(e);
       if(e.auth&&await auTryAuto()){auApply();inflight=false;return flush();}
-      retryT=setTimeout(flush,15000);
+      retryT=setTimeout(flush,e.auth?60000:10000);
     }finally{inflight=false;render();}
     if(Object.keys(pend).length)retryT=setTimeout(flush,600);
   }
@@ -3210,6 +3217,7 @@ const coilShared=(function(){
     const e=view()[id]; if(!e)return; let d; try{d=JSON.parse(e.json);}catch(_){return alert('저장 내용을 읽지 못함.');}
     if(!confirm(`«${e.name}» 을(를) 불러올까요?\n\n지금 ${e.kind==='plate'?'판재':'코일'} 화면 내용이 이 저장본으로 바뀜.\n(↶ 취소 또는 Ctrl+Z로 되돌릴 수 있음)`))return;
     const lb=`저장본 «${e.name}» 불러오기`;
+    const S0=window.__coil.get();if((S0.mode||'coil')!==e.kind){S0.mode=e.kind;window.__coil.save();try{window.__plateRender&&window.__plateRender();}catch(_){}}   /* v81 : 다른 화면 저장본이면 그 화면으로 옮겨서 불러옴 */
     if(e.kind==='plate')window.__plate.load(d,lb); else window.__coil.loadCoil(d,lb);
     cur[e.kind]=id; persist(); close(); window.__coil.msg(`«${e.name}» 을(를) 불러옴. (↶ 취소로 되돌리기)`);
   }
@@ -3233,6 +3241,7 @@ const coilShared=(function(){
       <button class="sm pri" type="button" id="svSave">💾 저장 목록에 저장</button>
       <button class="sm" type="button" id="svSaveArch">📦 보관함에 저장</button>
       <div class="muted" id="svNow" style="flex-basis:100%;font-size:12px"></div></div>
+    <div class="svkinds"><button class="sm" type="button" data-svkind="coil">🌀 코일 <b id="svKc"></b></button><button class="sm" type="button" data-svkind="plate">▦ 판재 <b id="svKp"></b></button><span class="muted" style="font-size:11.5px">다른 화면 저장본도 여기서 보고 불러올 수 있음</span></div>
     <div class="svtabs"><button class="sm" type="button" data-svtab="list">저장 목록 <b id="svN1"></b></button><button class="sm" type="button" data-svtab="arch">📦 보관함 <b id="svN2"></b></button>
       <input id="svQ" placeholder="이름·작성자 찾기"></div>
     <div class="svlist" id="svList"></div>
@@ -3244,6 +3253,7 @@ const coilShared=(function(){
     $('svName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveNew(false);}});
     $('svQ').addEventListener('input',()=>{ui.q=$('svQ').value.trim();render();});
     document.querySelectorAll('[data-svtab]').forEach(b=>b.onclick=()=>{ui.tab=b.dataset.svtab;render();});
+    document.querySelectorAll('[data-svkind]').forEach(b=>b.onclick=()=>{ui.kind=b.dataset.svkind;$('svName').placeholder=defName(ui.kind)+'  (비우면 이 이름)';render();});
     $('svList').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const id=b.closest('[data-id]').dataset.id,a=b.dataset.a;
       if(a==='load')load(id);else if(a==='arch')setArch(id,1);else if(a==='unarch')setArch(id,0);else if(a==='ow'){const x=view()[id];if(x&&confirm(`«${x.name}» 을(를) 지금 화면 내용으로 덮어쓸까요?`))overwrite(id);}
       else if(a==='ren')rename(id);else if(a==='del')del(id);});
@@ -3254,6 +3264,7 @@ const coilShared=(function(){
     $('svName').value=''; $('svName').placeholder=defName(kind)+'  (비우면 이 이름)';
     $('svDrawer').classList.add('on'); $('svScrim').classList.add('on'); $('svDrawer').setAttribute('aria-hidden','false');
     render(); setTimeout(()=>$('svName').focus(),80); fetchNow();
+    clearInterval(pollS); pollS=setInterval(()=>{if($('svDrawer').classList.contains('on'))fetchNow(true);else clearInterval(pollS);},20000);   /* v81 : 창이 열려 있는 동안 20초마다 새로 받기 */
   }
   function close(){if(!$('svDrawer'))return;$('svDrawer').classList.remove('on');$('svScrim').classList.remove('on');$('svDrawer').setAttribute('aria-hidden','true');}
   function render(){
@@ -3262,7 +3273,10 @@ const coilShared=(function(){
     $('svTitle').textContent=`💾 ${KN} 조합 저장`;
     $('svNow').textContent='지금 화면: '+summary(kind,curData(kind));
     const pc=Object.keys(pend).length;
-    $('svSync').textContent=fetching||inflight?'☁ 동기화 중…':pc?`☁ 서버에 올릴 작업 ${pc}건 대기`+(lastErr?' — '+lastErr:''):lastErr?'☁ '+lastErr:lastSync?'☁ 동기화됨 '+fmt(lastSync):'';
+    const sy=$('svSync');sy.textContent=fetching||inflight?'☁ 동기화 중…':pc?`☁ 서버에 올릴 작업 ${pc}건 대기`+(lastErr?' — '+lastErr:''):lastErr?'⚠ '+lastErr:lastSync?'☁ 서버 확인 '+fmt(lastSync):'';
+    sy.style.color=lastErr?'var(--bad)':'';sy.title=`서버 마지막 확인: ${lastOk?new Date(lastOk).toLocaleString('ko-KR'):'없음'}\n올릴 작업: ${pc}건\n서버 리비전: ${srev||'-'}`+(lastErr?`\n오류: ${lastErr}`:'');
+    const allK=Object.values(view());$('svKc').textContent=allK.filter(e=>e.kind==='coil').length;$('svKp').textContent=allK.filter(e=>e.kind==='plate').length;
+    document.querySelectorAll('[data-svkind]').forEach(b=>b.classList.toggle('on',b.dataset.svkind===kind));
     const L=all.filter(e=>!e.arch), A=all.filter(e=>e.arch);
     $('svN1').textContent=L.length; $('svN2').textContent=A.length;
     document.querySelectorAll('[data-svtab]').forEach(b=>b.classList.toggle('on',b.dataset.svtab===ui.tab));
@@ -3281,6 +3295,9 @@ const coilShared=(function(){
   document.addEventListener('click',e=>{const b=e.target.closest('.svb');if(!b)return;e.preventDefault();e.stopPropagation();open(b.dataset.sv);});
   addEventListener('online',flush);
   setTimeout(flush,3000);
+  setInterval(()=>{if(document.visibilityState==='visible'&&auValid()&&!fetching)fetchNow(true);},60000);   /* v81 : 작업 내용과 따로, 1분마다 공유 목록만 확인 */
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&auValid())fetchNow(true);});
+  try{const bc2=new BroadcastChannel('coilOrderTabV1');bc2.onmessage=ev=>{if((ev.data||{}).t==='shared')fetchNow(true);};}catch(_){}
   return {fromServer,flush,fetchNow,open,close,view,_state:()=>({cache,pend,recent})};
 })();
 window.__coilShared=coilShared;
