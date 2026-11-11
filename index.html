@@ -647,7 +647,7 @@ body:not(.mode-plate) .plate-only{display:none!important}
 
   <!-- 1. 코일 그림 -->
   <section class="panel no-print coil-only" id="coilSection">
-    <h2><span class="num">1</span>코일(원판) 슬리팅 배열<button type="button" class="sm svb" data-sv="coil" title="지금 코일 조합을 이름 붙여 저장 · 저장 목록/보관함 보기 (모든 사용자와 공유)">💾 저장 · 목록</button><button type="button" class="sm resetb" id="coilReset" title="주문 폭·수량·조합·직접 배열 코일을 모두 비웁니다 (↶ 취소로 되돌리기)">⟲ 초기화</button></h2>
+    <h2><span class="num">1</span>코일(원판) 슬리팅 배열<button type="button" class="sm svb" data-sv="coil" title="지금 코일 조합을 이름 붙여 저장 · 저장 목록/보관함 보기 (모든 사용자와 공유)">💾 저장 · 목록</button><button type="button" class="sm resetb" id="coilReset" title="재질·두께·주문 폭·수량·조합·직접 배열 코일을 모두 비웁니다 (↶ 취소로 되돌리기)">⟲ 초기화</button></h2>
     <div class="cfg" id="coilCfg">
       <div class="cg">
         <div class="cg-t">원자재 규격</div>
@@ -699,7 +699,7 @@ body:not(.mode-plate) .plate-only{display:none!important}
 
 <section class="panel no-print plate-only" id="platePanel">
   <h2><span class="num">1</span>판재(원판) 배열 · 원자재 산출
-    <span class="muted" style="font-weight:400;font-size:12px">제품(폭×길이×수량)을 넣으면 표준 원판과 코일 절단 판재를 비교해 필요한 장수·수율·원자재 무게·금액과 배열도를 보여 줍니다</span><button type="button" class="sm svb" data-sv="plate" title="지금 판재 조합을 이름 붙여 저장 · 저장 목록/보관함 보기 (모든 사용자와 공유)">💾 저장 · 목록</button><button type="button" class="sm resetb" id="plateReset" title="제품 목록·두께·선택한 원판·배열안을 비웁니다 (↶ 취소로 되돌리기)">⟲ 초기화</button></h2>
+    <span class="muted" style="font-weight:400;font-size:12px">제품(폭×길이×수량)을 넣으면 표준 원판과 코일 절단 판재를 비교해 필요한 장수·수율·원자재 무게·금액과 배열도를 보여 줍니다</span><button type="button" class="sm svb" data-sv="plate" title="지금 판재 조합을 이름 붙여 저장 · 저장 목록/보관함 보기 (모든 사용자와 공유)">💾 저장 · 목록</button><button type="button" class="sm resetb" id="plateReset" title="재질·두께·제품 목록·선택한 원판·배열안을 비웁니다 (↶ 취소로 되돌리기)">⟲ 초기화</button></h2>
   <div class="cfg" id="plateCfg">
     <div class="cg">
       <div class="cg-t">원자재 규격</div>
@@ -1008,7 +1008,7 @@ function buildIndex(){
 }
 function fillMatSelects(){
   const opts=GRADES.map(([k,d,s])=>`<option value="${k}">${k==="STS430BEAD"?"STS430 BEAD":k+(d?" ("+d+")":"")} · ${s}</option>`).join("");
-  document.querySelectorAll("select.matsel").forEach(el=>{el.innerHTML=opts;});
+  document.querySelectorAll("select.matsel").forEach(el=>{el.innerHTML=(el.id==="nMat"?"":'<option value="">재질 선택</option>')+opts;});
 }
 
 function purStats(I,k){
@@ -1313,7 +1313,7 @@ function renderResultActive(){
     x.classList.toggle("on",on); x.classList.remove("dim"); x.hidden=!on;
   });
 }
-function matOptions(sel){return GRADES.map(([k,d,s])=>`<option value="${k}"${k===sel?" selected":""}>${k==="STS430BEAD"?"STS430 BEAD":k+(d?" ("+d+")":"")}</option>`).join("");}
+function matOptions(sel){return '<option value=""'+(sel?"":" selected")+'>재질 선택</option>'+GRADES.map(([k,d,s])=>`<option value="${k}"${k===sel?" selected":""}>${k==="STS430BEAD"?"STS430 BEAD":k+(d?" ("+d+")":"")}</option>`).join("");}
 function renderSide(focus){
   const cc=curCoil();
   $("#autoPanel").hidden=!!cc; $("#coilPanel").hidden=!cc;
@@ -1805,9 +1805,9 @@ const msg=t=>{$("#msg").textContent=t;clearTimeout(msg._t);msg._t=setTimeout(()=
 
 /* ---------- 이벤트 ---------- */
 fillMatSelects();
-if(!GRADE_DENS[S.mat])S.mat="EGI";
-$("#mat").value=S.mat; $("#thk").value=S.t; $("#mw").value=S.mw; $("#trim").value=S.trim; $("#lanes").value=S.lanes; $("#minslit").value=S.minslit; $("#fill").checked=!!S.fill; $("#showAll").checked=!!S.showAll; $("#target").value=S.target;
-$("#nMat").value=S.mat; $("#nT").value=S.t;
+if(S.mat&&!GRADE_DENS[S.mat])S.mat="EGI";
+$("#mat").value=S.mat; $("#thk").value=S.t||""; $("#mw").value=S.mw; $("#trim").value=S.trim; $("#lanes").value=S.lanes; $("#minslit").value=S.minslit; $("#fill").checked=!!S.fill; $("#showAll").checked=!!S.showAll; $("#target").value=S.target;
+$("#nMat").value=S.mat||"EGI"; $("#nT").value=S.t||"";
 /* 코일 폭 빠른 선택: 추가(입력칸 Enter) · 수정(더블클릭) · 삭제(×) */
 if(!Array.isArray(S.presets))S.presets=defaults.presets.slice();
 function renderPresets(){
@@ -1940,6 +1940,7 @@ function undo(){
   const snap=UNDO.pop(); if(!snap){msg("되돌릴 작업이 없습니다.");return;}
   if(snap.full){window.__coil.apply(Object.assign(JSON.parse(snap.full),{plate:S.plate,mode:S.mode}),true);save();msg(`‘${snap.label}’ 작업을 취소했습니다.`);return;}
   UNDO_KEYS.forEach(k=>{if(snap[k]!==null)S[k]=snap[k];});
+  if(snap.cfg){S.mat=snap.cfg.mat;S.t=snap.cfg.t;S.price=snap.cfg.price;$("#mat").value=S.mat;$("#thk").value=S.t||"";$("#nMat").value=S.mat||"EGI";$("#nT").value=S.t||"";try{window.__cPriceRender&&window.__cPriceRender();}catch(e){}}
   selLane=null; refresh(); updToggle();
   if(plan[snap.active.g]&&plan[snap.active.g].patterns[snap.active.p]){active=snap.active;drawCoil();renderResultActive();}
   msg(`‘${snap.label}’ 작업을 취소했습니다.`+(UNDO.length?` (더 되돌릴 수 있는 작업 ${UNDO.length}개)`:""));
@@ -1952,10 +1953,10 @@ document.addEventListener("keydown",e=>{
 });
 /* v33 : 코일 조합 초기화 — 주문 선택·직접 입력 폭·조합 고정·직접 배열 코일을 비움 (재질·두께·코일폭·조건·발주 정보·직접 추가한 재고 품목은 그대로) */
 function coilReset(){
-  if(!confirm("코일 조합을 초기화할까요?\n\n주문 폭 선택, 직접 입력한 폭·수량, 손으로 고친 조합, 직접 배열 코일을 모두 비웁니다.\n재질·두께·코일 폭·슬리팅 조건·발주 정보는 그대로 둡니다.\n(↶ 취소 또는 Ctrl+Z로 되돌릴 수 있습니다)"))return;
-  pushUndo("코일 조합 초기화");
-  S.sel={};S.manualRows=[{w:"",q:""}];S.locked={};S.coils=[];S.tab="auto";S.fixed=[];S.groupWeights={};
-  selLane=null;active={g:0,p:0};refresh();updToggle();msg("코일 조합을 초기화했습니다. (↶ 취소로 되돌리기)");
+  if(!confirm("코일 조합을 초기화할까요?\n\n주문 폭 선택, 직접 입력한 폭·수량, 손으로 고친 조합, 직접 배열 코일을 모두 비웁니다.\n재질·두께와 직접 넣은 단가도 비웁니다.\n코일 폭·슬리팅 조건·발주 정보는 그대로 둡니다.\n(↶ 취소 또는 Ctrl+Z로 되돌릴 수 있습니다)"))return;
+  pushUndo("코일 조합 초기화");UNDO[UNDO.length-1].cfg={mat:S.mat,t:S.t,price:S.price};
+  S.sel={};S.manualRows=[{w:"",q:""}];S.locked={};S.coils=[];S.tab="auto";S.fixed=[];S.groupWeights={};S.mat="";S.t=0;S.price="";$("#mat").value="";$("#thk").value="";
+  selLane=null;active={g:0,p:0};refresh();updToggle();try{window.__cPriceRender&&window.__cPriceRender();}catch(e){}msg("코일 조합을 초기화했습니다. 재질·두께를 입력해 주세요. (↶ 취소로 되돌리기)");setTimeout(()=>{const e=$("#mat");if(e)e.focus();},50);
 }
 document.getElementById("coilReset").addEventListener("click",coilReset);
 function cleanManualRows(){S.manualRows=S.manualRows.filter(r=>+r.w>0&&+r.q>0);if(!S.manualRows.length)S.manualRows=[{w:"",q:""}];}
@@ -2196,8 +2197,8 @@ window.__coil={
       if(!S.sel||typeof S.sel!=="object")S.sel={}; if(!Array.isArray(S.manual))S.manual=[];
       if(!Array.isArray(S.presets))S.presets=defaults.presets.slice();
       if(!S.tab||(S.tab!=="auto"&&!S.coils.some(c=>c.id===S.tab)))S.tab="auto";
-      $("#mat").value=S.mat; $("#thk").value=S.t; $("#mw").value=S.mw; $("#trim").value=S.trim; $("#lanes").value=S.lanes; $("#minslit").value=S.minslit;
-      $("#fill").checked=!!S.fill; $("#showAll").checked=!!S.showAll; $("#target").value=S.target; $("#nMat").value=S.mat; $("#nT").value=S.t;
+      $("#mat").value=S.mat; $("#thk").value=S.t||""; $("#mw").value=S.mw; $("#trim").value=S.trim; $("#lanes").value=S.lanes; $("#minslit").value=S.minslit;
+      $("#fill").checked=!!S.fill; $("#showAll").checked=!!S.showAll; $("#target").value=S.target; $("#nMat").value=S.mat||"EGI"; $("#nT").value=S.t||"";
       document.querySelectorAll("[data-h]").forEach(el=>{el.value=S.header[el.dataset.h]||"";});
       if(!keepUndo)UNDO.length=0; selLane=null; active={g:0,p:0};
       buildIndex(); renderPresets(); refresh(); updToggle(); renderSupplier();
@@ -2228,7 +2229,7 @@ function P(){const S=C.get();if(!S.plate||typeof S.plate!=="object")S.plate={};c
   if(!Array.isArray(p.rows)||!p.rows.length)p.rows=[{n:"",w:"",l:"",q:"",nr:0}];
   if(!Array.isArray(p.sheets))p.sheets=PRE.map(a=>a.slice());
   if(p.m==null)p.m=10; if(p.gap==null)p.gap=10; if(p.rot==null)p.rot=1; if(p.coil==null)p.coil=1;
-  if(!p.mat)p.mat=S.mat||"EGI"; if(p.t!==""&&!(+p.t>0))p.t=+S.t||1.0; if(![1,2,3].includes(p.plan))p.plan=0;
+  if(p.mat==null)p.mat=S.mat||"EGI"; if(p.t!==""&&!(+p.t>0))p.t=+S.t||1.0; if(![1,2,3].includes(p.plan))p.plan=0;
   return p;}
 const save=()=>C.save();
 
@@ -2403,7 +2404,7 @@ function renderCmp(M,cs){if(!M.rows.length){$("#pCmp").innerHTML='<div class="mu
 let calcT=0,lateT=0;
 function compute(){clearTimeout(calcT);calcT=setTimeout(computeNow,250);}
 function computeNow(){if(C.get().mode!=="plate")return;const M=model();
-  if(!(M.t>0)){["#pOut","#pPats","#pOutBot","#pStk"].forEach(k=>{const e=$(k);if(e)e.innerHTML="";});const pc=$("#pCmp");if(pc)pc.innerHTML='<div class="pnote">원자재 두께(mm)를 입력하면 원판별로 비교합니다.</div>';PICK=null;return;}
+  if(!(M.t>0)||!M.mat){["#pOut","#pPats","#pOutBot","#pStk"].forEach(k=>{const e=$(k);if(e)e.innerHTML="";});const pc=$("#pCmp");if(pc)pc.innerHTML='<div class="pnote">원자재 재질과 두께(mm)를 입력하면 원판별로 비교합니다.</div>';PICK=null;return;}
   if(M.rows.reduce((a,r)=>a+r.q,0)>30000){$("#pCmp").innerHTML='<div class="pwarn">제품 수량 합계가 30,000개를 넘어 계산하지 않았습니다. 수량을 나눠서 넣어 주세요.</div>';$("#pOut").innerHTML="";PICK=null;return;}
   const cs=M.rows.length?candidates(M):[];
   let pk=cs.find(c=>c.key===M.p.pick)||cs.find(c=>c.best)||cs.find(c=>c.n)||null;
@@ -2635,8 +2636,8 @@ $("#pClear").addEventListener("click",()=>{const p=P();if(!p.rows.some(r=>num(r.
 $("#pUndo").addEventListener("click",undo);
 /* v33 : 판재 조합 초기화 — 제품 목록·선택 원판·배열안을 비움 (재질·두께·단가·배열 조건·원판 후보는 그대로) */
 $("#plateReset").addEventListener("click",()=>{const p=P();
-  if(!confirm("판재 조합을 초기화할까요?\n\n제품 목록, 두께, 선택한 원판, 고른 배열안을 비웁니다.\n재질·배열 조건·원판 후보는 그대로 둡니다.\n(↶ 취소 또는 Ctrl+Z로 되돌릴 수 있습니다)"))return;
-  snap("판재 조합 초기화");p.rows=[{n:"",w:"",l:"",q:"",nr:0}];p.t="";p.price="";p.pick="";p.plan=0;save();closePD();PICK=null;renderAll();C.msg("판재 조합을 초기화했습니다. 두께를 입력해 주세요. (↶ 취소로 되돌리기)");setTimeout(()=>{const e=$("#pT");if(e)e.focus();},50);});
+  if(!confirm("판재 조합을 초기화할까요?\n\n재질, 두께, 제품 목록, 선택한 원판, 고른 배열안을 비웁니다.\n배열 조건·원판 후보는 그대로 둡니다.\n(↶ 취소 또는 Ctrl+Z로 되돌릴 수 있습니다)"))return;
+  snap("판재 조합 초기화");p.rows=[{n:"",w:"",l:"",q:"",nr:0}];p.mat="";p.t="";p.price="";p.pick="";p.plan=0;save();closePD();PICK=null;renderAll();C.msg("판재 조합을 초기화했습니다. 재질·두께를 입력해 주세요. (↶ 취소로 되돌리기)");setTimeout(()=>{const e=$("#pMat");if(e)e.focus();},50);});
 function parsePaste(txt){const out=[];String(txt||"").split(/\r?\n/).forEach(line=>{if(!line.trim())return;const cells=line.split(/\t|,|;/).map(s=>s.trim()).filter(s=>s!=="");
   let name="",nums=[];cells.forEach(cl=>{const m=cl.match(/^(\d+(?:\.\d+)?)\s*[x×*X]\s*(\d+(?:\.\d+)?)(?:\s*[x×*X]\s*(\d+(?:\.\d+)?))?$/);
     if(m){if(m[3]){nums.push(+m[2],+m[3]);}else nums.push(+m[1],+m[2]);return;}const v=cl.replace(/,/g,"");if(/^\d+(\.\d+)?$/.test(v)){nums.push(+v);return;}if(!name)name=cl;});
@@ -2820,7 +2821,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v68';
+var COIL_VER='v69';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
