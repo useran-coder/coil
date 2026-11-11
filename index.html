@@ -1203,11 +1203,12 @@ function drawCoil(){
   h+=band(X0,X1,"var(--steel1)");
   const labels=[];
   if(p){
-    const trimTot=W-p.used,tl2=trimTot/2; let x=X0+tl2*sx;
+    const trimTot=W-p.used,tl2=trimTot/2; let x=X0+tl2*sx;const xFirst=x;
     h+=band(X0,x,"url(#trimG)");h+=band(X0,x,"url(#hatchL)");   /* v59 : 트림 = 어두운 강판색 원통 음영(3D) + 옅은 사선 */
     p.lanes.forEach(ln=>{const xb=x+ln.w*sx,col=colOf(cm,g.key,ln.w);h+=band(x,xb,col);if(ln.extra)h+=band(x,xb,"url(#xtra)");
       h+=`<path d="M${xb},${Y0} A${RX},${RY} 0 0 1 ${xb},${Y1}" fill="none" stroke="#fff" stroke-width="1.5"/>`;labels.push({xa:x,xb,w:ln.w,extra:ln.extra,li:labels.length});x=xb;});
-    h+=band(x,X1,"url(#trimG)");h+=band(x,X1,"url(#hatchL)");
+    h+=band(x,X1,"url(#trimG)");
+    if(tl2>0)h+=`<path d="M${xFirst},${Y0} A${RX},${RY} 0 0 1 ${xFirst},${Y1}" fill="none" stroke="#fff" stroke-width="1.5"/>`;   /* v66 : 첫 슬릿 앞(왼쪽 트림 경계)도 흰 선 */h+=band(x,X1,"url(#hatchL)");
     labels.unshift({xa:X0,xb:X0+tl2*sx,w:tl2,trim:true}); labels.push({xa:x,xb:X1,w:tl2,trim:true});
   }
   h+=band(X0,X1,"url(#shade)");
@@ -2817,7 +2818,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v65';
+var COIL_VER='v66';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
