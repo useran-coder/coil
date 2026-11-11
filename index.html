@@ -2755,7 +2755,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v46';
+var COIL_VER='v47';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
@@ -3127,19 +3127,37 @@ const coilShared=(function(){
 window.__coilShared=coilShared;
 
 /* ───── 새 버전 알림 (새 버전은 GitHub coil 저장소에 바로 올림 — 화면의 업로드 버튼은 없앰) ───── */
+/* v47 : 새로 고쳐도 팝업이 계속 뜨던 문제
+   원인 — GitHub 커밋 메시지(vNN)만 보고 알렸는데, GitHub Pages 는 커밋 뒤 1~몇 분 늦게 새 파일을 내보내고
+          브라우저도 index.html 을 최대 10분 캐시함 → 새로 고쳐도 옛 파일이 다시 열려 팝업이 반복됨.
+   고침 — 웹(github.io)에서는 실제로 내보내는 index.html(캐시 안 씀) 안의 COIL_VER 를 읽어, 정말 새 파일이 있을 때만 알림.
+          [새로고침]은 캐시를 지운 새 파일을 받은 뒤 다시 엶. [나중에] 누른 버전은 이 창에서 다시 띄우지 않음. */
+const onWeb=()=>/github\.io$/.test(location.hostname);
+async function latestVer(){
+  if(onWeb()){
+    const r=await fetch(location.origin+location.pathname+'?_v='+Date.now(),{cache:'no-store'}); if(!r.ok)return 0;
+    const m=/COIL_VER='v(\d+)'/.exec(await r.text()); return m?+m[1]:0;
+  }
+  const r=await fetch('https://api.github.com/repos/useran-coder/coil/commits?path=index.html&per_page=1',{cache:'no-store'});if(!r.ok)return 0;
+  const j=await r.json(), m=/v(\d+)/.exec((j[0]&&j[0].commit&&j[0].commit.message)||''); return m?+m[1]:0;
+}
+async function verGo(){
+  try{await coilSync.flush();}catch(e){}
+  if(!onWeb()){window.open('https://useran-coder.github.io/coil/','_blank');return;}
+  try{await fetch(location.href,{cache:'reload'});}catch(e){}   /* 브라우저 캐시를 새 파일로 바꿈 */
+  location.reload();
+}
 async function verCheck(){
   try{
-    const r=await fetch('https://api.github.com/repos/useran-coder/coil/commits?path=index.html&per_page=1',{cache:'no-store'});if(!r.ok)return;
-    const j=await r.json(), m=/v(\d+)/.exec((j[0]&&j[0].commit&&j[0].commit.message)||''); if(!m)return;
-    const latest=+m[1], mine=+COIL_VER.slice(1);
-    const vc=document.getElementById('verChip'); if(vc)vc.title='GitHub 최신 v'+latest;
+    const latest=await latestVer(), mine=+COIL_VER.slice(1); if(!latest)return;
+    const vc=document.getElementById('verChip'); if(vc)vc.title='최신 v'+latest;
     if(latest>mine&&!document.getElementById('updBar')&&window.__updLater!==latest){
-      const onWeb=/github\.io$/.test(location.hostname), b=document.createElement('div'); b.id='updBar';
+      const b=document.createElement('div'); b.id='updBar';
       b.innerHTML=`<div class="uc" role="dialog" aria-label="새 버전 있음"><div class="ui">🔄</div><div class="ut">새 버전 있음</div>
         <div class="uv"><b>v${latest}</b> · 지금 화면 ${COIL_VER}</div><div class="un">작업 내용은 서버에 저장한 뒤 새로 고칩니다</div>
-        <div class="ub"><button type="button" id="updX">나중에</button><button type="button" id="updGo">${onWeb?'새로고침':'🌐 웹에서 열기'}</button></div></div>`;
+        <div class="ub"><button type="button" id="updX">나중에</button><button type="button" id="updGo">${onWeb()?'새로고침':'🌐 웹에서 열기'}</button></div></div>`;
       document.body.appendChild(b);
-      document.getElementById('updGo').onclick=()=>{coilSync.flush().finally(()=>{if(onWeb)location.reload();else window.open('https://useran-coder.github.io/coil/','_blank');});};
+      document.getElementById('updGo').onclick=()=>{document.getElementById('updGo').disabled=true;document.getElementById('updGo').textContent='받는 중…';verGo();};
       document.getElementById('updX').onclick=()=>{window.__updLater=latest;b.remove();};
     }
   }catch(e){}
