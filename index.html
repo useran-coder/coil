@@ -2699,8 +2699,11 @@ function ucOpen(){const p=P();let el=$("#ucBox");
     const close=()=>{$("#ucBox").classList.remove("on");$("#ucScrim").classList.remove("on");};
     $("#ucX").onclick=close;$("#ucNo").onclick=close;$("#ucScrim").onclick=close;
     el.addEventListener("keydown",e=>{if(e.key==="Escape"){e.stopPropagation();close();}else if(e.key==="Enter"&&!$("#ucOk").disabled){e.preventDefault();$("#ucOk").click();}});
-    $("#ucOk").onclick=()=>{const r=calcUC();if(!(r.v>0))return;snap("판재 단가산정");const q=P();if(r.t>0)q.t=r.t;q.price=Math.round(r.v);q.priceCalc={t:r.t,w:r.w,l:r.l,sheet:r.pr,v:q.price};save();renderCfg();renderRows();compute();close();
-      C.msg(`판재 ${F(r.w)}×${F(r.l)} 장당 ${F(r.pr)}원 → ${F(q.price)}원/kg 적용. (↶ 취소로 되돌리기)`);};
+    $("#ucOk").onclick=()=>{const r=calcUC();if(!(r.v>0))return;snap("판재 단가산정");const q=P();if(r.t>0)q.t=r.t;q.price=Math.round(r.v);q.priceCalc={t:r.t,w:r.w,l:r.l,sheet:r.pr,v:q.price};
+      /* v85 : 산정한 규격을 원판 후보에 넣고(없으면) 그 원판으로 배열 */
+      if(r.w>0&&r.l>0){const NMS={"1219x2438":"4×8","1219x3048":"4×10","1524x3048":"5×10"};if(!q.sheets.some(x=>+x[0]===r.w&&+x[1]===r.l))q.sheets.push([r.w,r.l,NMS[r.w+"x"+r.l]||""]);q.pick=r.w+"x"+r.l;}
+      save();renderCfg();renderRows();compute();close();
+      C.msg(`판재 ${F(r.w)}×${F(r.l)} 장당 ${F(r.pr)}원 → ${F(q.price)}원/kg 적용 · 이 원판으로 배열. (↶ 취소로 되돌리기)`);};
     el._calc=calcUC;}
   const pc=p.priceCalc||{};$("#ucMat").textContent=`${p.mat||"재질 미선택"} · 비중 ${C.density(p.mat)||7.85}`;
   $("#ucT").value=num(p.t)>0?p.t:(pc.t||"");$("#ucW").value=F(pc.w||1219);$("#ucL").value=F(pc.l||2438);$("#ucP").value=pc.sheet&&pc.v===num(p.price)?F(pc.sheet):"";
@@ -2920,7 +2923,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v84';
+var COIL_VER='v85';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
