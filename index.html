@@ -95,6 +95,8 @@ button.chip.on{background:var(--accent-soft);border-color:var(--accent);color:va
 .cf input,.cf select{height:38px;padding:0 10px}
 .cf input[data-num]{text-align:right}
 .cf .strong{font-size:15px;font-weight:700}
+.cg .cf input:not(.padd):not(.big2):not([type=checkbox]):not([type=radio]){font-size:15px;font-weight:700}
+.cg .cf input::placeholder{font-size:12px;font-weight:400}   /* v65 : 설정 칸 숫자는 모두 두께 칸과 같은 크기 */
 .cf .big2{font-size:18px}
 .chips{display:flex;gap:6px;height:38px;align-items:center}
 .chips{flex-wrap:wrap;height:auto;min-height:38px}
@@ -2815,7 +2817,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v64';
+var COIL_VER='v65';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
