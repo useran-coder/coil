@@ -1189,7 +1189,7 @@ function drawCoil(){
   const X0=110,X1=890,Y0=70,Y1=220,RX=34,RY=(Y1-Y0)/2,CY=(Y0+Y1)/2,sx=(X1-X0)/W;
   let h=`<defs>
     <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".35" stop-color="#fff" stop-opacity=".08"/><stop offset=".7" stop-color="#000" stop-opacity=".08"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></linearGradient>
-    <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="var(--bad-soft)"/><line x1="0" y1="0" x2="0" y2="8" stroke="var(--bad)" stroke-width="2" opacity=".5"/></pattern>
+    <pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#b4bcc7"/><line x1="0" y1="0" x2="0" y2="10" stroke="#5d6673" stroke-width="1.3" opacity=".45"/></pattern>
     <pattern id="xtra" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="#fff" stroke-width="2" opacity=".45"/></pattern></defs>`;
   const band=(xa,xb,fill)=>`<path d="M${xa},${Y0} A${RX},${RY} 0 0 1 ${xa},${Y1} L${xb},${Y1} A${RX},${RY} 0 0 0 ${xb},${Y0} Z" fill="${fill}"/>`;
   h+=band(X0,X1,"var(--steel1)");
@@ -2810,7 +2810,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v56';
+var COIL_VER='v57';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
