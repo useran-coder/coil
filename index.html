@@ -1,0 +1,2174 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>코일 슬리팅 발주</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f4f5f7; --panel:#ffffff; --ink:#1d2330; --muted:#6b7280; --line:#dfe3ea;
+  --accent:#1f5fbf; --accent-soft:#e7effb; --warn:#b45309; --warn-soft:#fef3e2;
+  --bad:#b91c1c; --bad-soft:#fdecec; --ok:#15803d; --ok-soft:#e8f6ee;
+  --steel1:#c9ced6; --steel2:#8d96a3; --steel3:#5d6673; --shadow:0 10px 40px rgba(0,0,0,.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14171c; --panel:#1d2128; --ink:#e7eaf0; --muted:#9aa3b2; --line:#2e343e;
+    --accent:#6ea3f5; --accent-soft:#1d2c44; --warn:#f0b35a; --warn-soft:#3a2c17;
+    --bad:#f08080; --bad-soft:#3d1f22; --ok:#6fd39a; --ok-soft:#173527;
+    --steel1:#8a929e; --steel2:#5c6470; --steel3:#3b424c; --shadow:0 10px 40px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14171c; --panel:#1d2128; --ink:#e7eaf0; --muted:#9aa3b2; --line:#2e343e;
+  --accent:#6ea3f5; --accent-soft:#1d2c44; --warn:#f0b35a; --warn-soft:#3a2c17;
+  --bad:#f08080; --bad-soft:#3d1f22; --ok:#6fd39a; --ok-soft:#173527;
+  --steel1:#8a929e; --steel2:#5c6470; --steel3:#3b424c; --shadow:0 10px 40px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 "Pretendard","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+header.top{position:sticky;top:0;z-index:60;box-shadow:0 1px 0 var(--line),0 4px 12px rgba(0,0,0,.06);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line);background:var(--panel)}
+header.top h1{font-size:18px;margin:0;font-weight:700}
+.linkbar{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);margin-right:4px}
+.dot.on{background:var(--ok)} .dot.off{background:var(--warn)}
+.wrap{max-width:1440px;margin:0 auto;padding:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.panel h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+.panel h2 .num{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px}
+.grid2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px}
+.topgrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+@media (max-width:1100px){.grid2{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:860px){.topgrid{grid-template-columns:minmax(0,1fr)}}
+.empty{white-space:normal}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+input[data-num]{width:90px}
+input.big{font-size:20px;font-weight:700;width:110px;text-align:right}
+input.mid{font-size:16px;font-weight:700;width:100px}
+.sep{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
+button{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+button.sm{padding:3px 8px;font-size:12px}
+button.chip{border-radius:999px;padding:3px 10px;font-size:12px}
+button.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.muted{color:var(--muted)}
+/* 매입처 검색 콤보박스 */
+.combo{position:relative;width:280px;max-width:100%}
+.combo input{width:100%;height:34px;padding:0 30px 0 10px}
+.cb-btn{position:absolute;right:2px;top:2px;height:30px;width:26px;padding:0;border:none;background:transparent;color:var(--muted)}
+.cb-list{position:absolute;z-index:30;top:calc(100% + 4px);left:0;width:max(100%,380px);max-width:90vw;max-height:320px;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:4px 0}
+.cb-g{font-size:11px;font-weight:700;color:var(--accent);padding:6px 12px 2px}
+.cb-o{display:flex;justify-content:space-between;gap:10px;padding:6px 12px;cursor:pointer;font-size:13px;color:var(--ink)}
+.cb-o small{color:var(--muted);white-space:nowrap}
+.cb-o.act,.cb-o:hover{background:var(--accent-soft)}
+.cb-o.cur{font-weight:700}
+.cb-o mark{background:var(--warn-soft);color:inherit;border-radius:2px}
+.cb-none{padding:8px 12px;font-size:12.5px;color:var(--muted)}
+.h2s{flex-wrap:wrap}
+.srch{margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-weight:400}
+.srch input{width:300px;max-width:100%;height:34px;padding:0 12px 0 32px;border-radius:999px;font-size:13px;
+  background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%239aa3b2' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='m11 11 3.5 3.5'/%3E%3C/svg%3E") no-repeat 11px center}
+.srch #qCnt{font-size:12px;color:var(--muted);white-space:nowrap}
+@media (max-width:600px){.srch{margin-left:0;width:100%}.srch input{flex:1;width:auto}}
+.ibar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.ibar>*{height:32px;display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:1;margin:0}
+.ib-spec{padding:0 12px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:700}
+.ib-item{color:var(--ink);padding:0 4px;white-space:nowrap}
+.ib-item input[type=checkbox]{margin:0;width:15px;height:15px}
+.ib-item input[data-num]{width:56px;height:28px;padding:0 6px;text-align:right}
+.ib-gap{flex:1;min-width:0;height:0}
+.ib-btn{padding:0 12px;font-size:12.5px;white-space:nowrap}
+/* 상단 설정 그룹 */
+.cfg{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.cg{border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:8px 12px 10px}
+.cg-t{font-size:11.5px;font-weight:700;color:var(--accent);margin-bottom:6px;letter-spacing:.02em}
+.cg-r{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.cf{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);margin:0}
+.cf input,.cf select{height:38px;padding:0 10px}
+.cf input[data-num]{text-align:right}
+.cf .strong{font-size:15px;font-weight:700}
+.cf .big2{font-size:18px}
+.chips{display:flex;gap:6px;height:38px;align-items:center}
+.chips{flex-wrap:wrap;height:auto;min-height:38px}
+.chips .chip{height:30px;padding:0 12px}
+.pchip{position:relative;display:inline-flex}
+.pchip .px{position:absolute;top:-6px;right:-6px;width:17px;height:17px;padding:0;border-radius:50%;font-size:11px;line-height:15px;text-align:center;background:var(--bad);border-color:var(--bad);color:#fff;opacity:0;transition:opacity .15s}
+.pchip:hover .px,.pchip .px:focus{opacity:1}
+.padd{height:30px!important;width:96px;border-radius:999px!important;border-style:dashed!important;text-align:center!important;font-size:12px;padding:0 8px!important}
+.cbox{height:38px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);font-size:13px;cursor:pointer;white-space:nowrap}
+.cbox input{margin:0;width:15px;height:15px}
+.manual{margin-top:30px}
+@media (max-width:860px){.manual{margin-top:0}}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th,td{border-bottom:1px solid var(--line);padding:6px 6px;text-align:left;white-space:nowrap}
+th{font-size:12px;color:var(--muted);font-weight:600}
+td.r,th.r{text-align:right}
+#invHead th[data-sort]{cursor:pointer;user-select:none;white-space:nowrap}
+#invHead th[data-sort]:hover{color:var(--accent)}
+#invHead th[data-sort]::after{content:"↕";margin-left:3px;opacity:.35;font-size:11px}
+#invHead th.asc::after{content:"▲";opacity:1;color:var(--accent)}
+#invHead th.desc::after{content:"▼";opacity:1;color:var(--accent)}
+#invHead th.asc,#invHead th.desc{color:var(--accent)}
+#inv tr{cursor:pointer}
+#inv tr:hover{background:var(--bg)}
+#inv tr.sel{background:var(--accent-soft)}
+#inv tr.open{outline:2px solid var(--accent);outline-offset:-2px}
+td input[data-num]{width:64px;padding:3px 6px}
+.badge{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:600}
+.badge.bad{background:var(--bad-soft);color:var(--bad)}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.warn{background:var(--warn-soft);color:var(--warn)}
+.badge.tot{font-size:14px;padding:2px 10px}
+.badge.gray{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.coil-svg{width:100%;height:auto;display:block}
+.stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.stat{flex:1 1 130px;border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+.stat .k{font-size:12px;color:var(--muted)}
+.stat .v{font-size:18px;font-weight:700}
+/* 우측 직접 입력 */
+.manual{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--bg)}
+.manual h3{margin:0 0 4px;font-size:14px}
+.mrow{display:grid;grid-template-columns:24px 1fr 1fr 28px;gap:6px;align-items:center;margin-bottom:6px}
+.mrow input{width:100%;text-align:right}
+.mrow .i{font-size:11px;color:var(--muted);text-align:center}
+.mhead{display:grid;grid-template-columns:24px 1fr 1fr 28px;gap:6px;font-size:11px;color:var(--muted);margin:6px 0 4px}
+.msum{display:flex;justify-content:space-between;font-size:12px;border-top:1px dashed var(--line);margin-top:8px;padding-top:8px}
+/* 결과 */
+.group{border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:12px}
+.group-h{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:8px}
+.group-h b{font-size:15px}
+.pat{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px;border-radius:6px;cursor:pointer;border:1px solid transparent}
+.pat:hover{background:var(--bg)}
+.pat.on{border-color:var(--accent);background:var(--accent-soft)}
+.pat .bar{display:flex;height:26px;border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+.pat .bar div{display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;overflow:hidden;border-right:1px solid rgba(255,255,255,.6)}
+.pat .bar .trim{background:repeating-linear-gradient(45deg,var(--bad-soft),var(--bad-soft) 4px,transparent 4px,transparent 8px);color:var(--bad)}
+.pat .bar .extra{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.35) 0 3px,transparent 3px 7px)}
+.pat .cnt{font-weight:700;font-size:15px;min-width:52px}
+.pat .meta{font-size:12px;color:var(--muted);text-align:right}
+.alert{padding:8px 12px;border-radius:6px;margin:6px 0;font-size:13px}
+.alert.warn{background:var(--warn-soft);color:var(--warn)}
+.alert.bad{background:var(--bad-soft);color:var(--bad)}
+.alert.info{background:var(--accent-soft);color:var(--accent)}
+.tips{font-size:12px;color:var(--muted);margin:8px 0 0;padding-left:18px}
+/* 슬라이드 패널 */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(560px,100%);background:var(--panel);border-left:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(105%);transition:transform .25s ease;z-index:50;display:flex;flex-direction:column}
+.drawer.on{transform:none}
+.drawer .dh{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.drawer .dh h3{margin:0;font-size:17px}
+.drawer .db{padding:14px 16px;overflow-y:auto;flex:1}
+.drawer h4{font-size:13.5px;margin:18px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--line)}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.kpi{border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.kpi .k{font-size:11.5px;color:var(--muted)} .kpi .v{font-size:16px;font-weight:700} .kpi .s{font-size:11px;color:var(--muted)}
+.mbars{display:flex;align-items:flex-end;gap:3px;height:90px;padding-top:14px}
+.mbars div{flex:1;background:var(--accent);border-radius:2px 2px 0 0;position:relative;min-height:1px}
+.mbars div span{position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--muted);white-space:nowrap}
+.mlabels{display:flex;gap:3px;font-size:9.5px;color:var(--muted)} .mlabels span{flex:1;text-align:center}
+.prod{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+.prod .pn{font-weight:700} .prod .ps{font-size:12px;color:var(--muted)}
+.prod .pg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:6px;font-size:12px}
+.prod .pg b{display:block;font-size:13.5px}
+.custs{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.custs span{font-size:11.5px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+.stat.prodc{font:inherit;text-align:left;color:var(--ink);background:var(--accent-soft);border-color:var(--accent);cursor:pointer;padding:8px 12px}
+.stat.prodc:hover{box-shadow:0 0 0 3px var(--accent-soft);border-width:2px;padding:7px 11px}
+.stat.prodc .k{display:flex;justify-content:space-between;gap:6px;color:var(--accent);font-weight:600}
+.stat.prodc .k span{font-weight:400;font-size:11px}
+.stat.prodc .v{color:var(--accent)}
+.stat .s{font-size:11.5px;color:var(--muted)}
+.drawer .dt th{white-space:normal;line-height:1.25}
+.drawer .dt.sum td{white-space:normal}
+.mth{display:block;font-size:10px;color:var(--warn)}
+.mth.ok{color:var(--ok)}
+.badt{color:var(--bad);font-weight:700}.warnt{color:var(--warn);font-weight:700}.okt{color:var(--ok);font-weight:700}
+.stat.all{border-style:dashed;background:var(--bg)}
+.stat.all .v{font-size:15px;color:var(--muted)}
+/* 코일 탭 */
+.ctabs{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.tabs{display:flex;flex-wrap:wrap;gap:2px}
+.tabs button{border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;padding:7px 14px;font-size:13px;color:var(--muted);background:transparent;margin-bottom:-1px}
+.tabs button:hover{color:var(--ink)}
+.tabs button.on{background:var(--panel);border-color:var(--line);color:var(--accent);font-weight:700;box-shadow:inset 0 2px 0 var(--accent)}
+.tabs button small{font-size:11px;color:var(--muted);font-weight:400;margin-left:4px}
+.tabs button.add{color:var(--accent);border:1px dashed var(--accent);border-radius:8px;margin:0 0 4px 6px;padding:4px 12px}
+.tabs button .err{color:var(--bad)}
+#coilTitle{font-size:12.5px;margin-left:auto}
+.pat .cnt .lkb{display:block;margin-top:2px;font-size:10.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:0 4px;text-align:center}
+.pat .cnt .fxb{display:block;margin-top:2px;font-size:10.5px;font-weight:700;color:var(--warn);background:var(--warn-soft);border-radius:4px;padding:0 4px;text-align:center}
+.coil-svg .lh{cursor:pointer;fill:transparent}
+.coil-svg .lh:hover{fill:rgba(255,255,255,.18)}
+.coil-svg .ldel{cursor:pointer}
+.coil-svg .ldel:hover circle{fill:#991b1b}
+.ce-spec{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0 4px}
+.ce-spec label:first-child{grid-column:1/-1}
+.ce-spec label{white-space:nowrap}
+.ce-spec label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)}
+.ce-spec input,.ce-spec select{height:32px;padding:0 6px;width:100%}
+.ce-spec input{text-align:right}
+.ce-h{display:flex;align-items:center;gap:8px}
+.ce-h h3{margin:0}
+.ce-h .del{margin-left:auto;color:var(--bad)}
+.ce-h .del:hover{border-color:var(--bad);background:var(--bad-soft)}
+.msum .bad{color:var(--bad);font-weight:700}
+.need{display:flex;gap:12px;align-items:center;padding:10px 12px;margin:6px 0 8px;border-radius:8px;background:var(--accent-soft);border:none}
+.need>div{display:flex;flex-direction:column;align-items:center;min-width:72px;padding-right:12px;border-right:1px solid var(--accent)}
+.need>div span{font-size:11.5px;color:var(--accent)}
+.need>div b{font-size:22px;color:var(--accent);line-height:1.1}
+.need p{margin:0;font-size:12.5px;color:var(--ink)}
+.msum .split{color:var(--accent);font-weight:700}
+/* 조합 삭제 */
+.group-h .del{color:var(--bad)}
+.group-h .del:hover{border-color:var(--bad);background:var(--bad-soft)}
+.pat{grid-template-columns:auto minmax(0,1fr) auto 22px}
+.px2{width:22px;height:22px;padding:0;border-radius:50%;font-size:14px;line-height:20px;color:var(--muted);background:transparent}
+.px2:hover{color:#fff;background:var(--bad);border-color:var(--bad)}
+@media (max-width:600px){.pat{grid-template-columns:1fr}}
+/* 남은 폭 활용 */
+.fillbox{margin-top:10px;border:1px dashed var(--accent);border-radius:8px;padding:8px 10px;background:var(--accent-soft)}
+.fb-h{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;margin-bottom:6px;font-size:13px}
+.fb-h>b{color:var(--accent)}
+.fillbox{transition:opacity .2s,box-shadow .2s,border-color .2s}
+.fillbox.dim{opacity:.45}
+.fillbox.dim:hover{opacity:.85}
+.fillbox.on{border:2px solid var(--accent);box-shadow:0 0 0 4px var(--accent-soft),0 6px 18px rgba(0,0,0,.18)}
+.fb-sel{display:none;font-style:normal;font-size:11px;font-weight:700;color:#fff;background:var(--accent);border-radius:999px;padding:1px 8px}
+.fillbox.on .fb-sel{display:inline-block}
+.fb-h span{color:var(--muted);font-size:12px}
+.fillbox .dt th{background:transparent}
+.fillbox .dt td{background:var(--panel)}
+.fillbox tr.fr{cursor:pointer}
+.fillbox tr.fr:hover td{background:var(--bg)}
+.fillbox tr.fr.open td{background:var(--accent-soft)}
+.fillbox tr.fr.open td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+/* 상세창 표 */
+.dt{width:100%;border-collapse:collapse;font-size:12.5px}
+.dt th{font-size:11.5px;font-weight:600;color:var(--muted);background:var(--bg);padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.dt td{padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+.dt td.nm{display:flex;gap:6px;align-items:flex-start;white-space:normal;min-width:150px}
+.dt td.nm b{font-weight:600}
+.dt td.nm small{display:block;color:var(--muted);font-size:11px;margin-top:1px}
+.dt .car{width:10px;color:var(--muted);font-size:10px;margin-top:3px;transition:transform .15s}
+.dt tr.xp{cursor:pointer}
+.dt tr.xp:hover{background:var(--bg)}
+.dt tr.xp.open .car{transform:rotate(90deg);color:var(--accent)}
+.dt tr.sub>td{background:var(--bg);padding:4px 8px 8px 24px}
+.dt.mini{font-size:12px}
+.dt.mini th{background:transparent}
+.dt.sum{margin-bottom:10px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.dt.sum td{border-bottom:none;font-size:13px}
+.dt th,.dt td{padding-left:6px;padding-right:6px}
+.dt td.nm{min-width:0}
+.pbar{position:relative;height:16px;background:var(--bg);border-radius:3px;overflow:hidden;min-width:48px}
+.pbar i{position:absolute;inset:0 auto 0 0;background:var(--accent);opacity:.35}
+.pbar span{position:relative;display:block;text-align:right;padding-right:4px;font-size:11px;line-height:16px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:4px 0 8px}
+.seg button{border:none;border-radius:0;padding:5px 14px;font-size:12.5px;background:var(--panel);color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--accent);color:#fff;font-weight:600}
+.empty{padding:14px;border:1px dashed var(--line);border-radius:8px;color:var(--muted);font-size:13px}
+@media (max-width:600px){
+  .wrap{padding:10px 16px}
+  .panel{padding:12px}
+  .pat{grid-template-columns:1fr}
+  .pat .meta{text-align:left}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .prod .pg{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+/* 발주서 */
+.sheet{background:#fff;color:#111;border:1px solid #ccc;padding:28px;max-width:1000px;margin:0 auto}
+.sheet h3{text-align:center;font-size:24px;letter-spacing:12px;margin:0 0 16px}
+.sheet table{border:1px solid #333}
+.sheet th,.sheet td{border:1px solid #333;padding:5px 7px;color:#111;font-size:12.5px;white-space:normal}
+.sheet th{background:#eef0f3;color:#111}
+.sheet .sign{display:flex;justify-content:flex-end;margin-bottom:10px}
+.sheet .sign div{border:1px solid #333;width:70px;text-align:center;font-size:12px}
+.sheet .sign div span{display:block;border-bottom:1px solid #333;padding:2px}
+.sheet .sign div i{display:block;height:44px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.hbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:8px}
+.hbar button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+#msg{position:fixed;left:16px;bottom:16px;z-index:9001;max-width:min(560px,calc(100vw - 32px));padding:9px 14px;border-radius:10px;background:var(--panel);color:var(--ink)!important;border:1px solid var(--line);box-shadow:var(--shadow);font-size:13px}
+#msg:empty{display:none}
+.toppanel h2{justify-content:space-between}
+.toppanel .pclose{margin-left:auto}
+@media print{
+  body{background:#fff}
+  header.top,.no-print,.drawer,.scrim{display:none!important}
+  #sheetPanel{display:block!important}
+  .wrap{padding:0;max-width:none}
+  .panel{border:none;padding:0;margin:0}
+  .sheet{border:none;padding:0}
+}
+
+/* 숫자 입력칸: 기본 위·아래 화살표 숨기고 얇은 커스텀 스테퍼(마우스를 올리거나 입력 중일 때만 표시) */
+input[data-num]{-moz-appearance:textfield;appearance:textfield;padding-right:26px!important}
+input[data-num]::-webkit-inner-spin-button,input[data-num]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.ib-item input[data-num]{width:66px}
+td input[data-num]{width:96px}
+#nstep{position:fixed;z-index:9999;display:none;flex-direction:column;width:18px;border-left:1px solid var(--line);opacity:0;transition:opacity .12s}
+#nstep.show{display:flex;opacity:1}
+#nstep button{flex:1;display:grid;place-items:center;padding:0;margin:0;border:0;background:transparent;color:var(--muted);cursor:pointer;min-height:0;border-radius:0}
+#nstep button:first-child{border-top-right-radius:5px}
+#nstep button:last-child{border-bottom-right-radius:5px}
+#nstep button:hover{background:var(--accent-soft);color:var(--accent)}
+#nstep button:active{background:var(--accent);color:#fff}
+#nstep svg{width:9px;height:9px;pointer-events:none}
+button:disabled{opacity:.45;cursor:default;pointer-events:none}
+</style>
+<style>
+/* ===== v17 로그인(매출분석 계정) · 서버 동기화 · GitHub 업로드 ===== */
+html:not(.au-in) body>*:not(#auGate){visibility:hidden!important}
+html:not(.au-mgr) .au-mgr-only{display:none!important}
+#auGate{position:fixed;inset:0;z-index:99999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;visibility:visible!important}
+#auForm{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:26px 24px 20px;color:var(--ink)}
+#auForm .au-h{text-align:center;margin-bottom:16px}
+#auForm .au-t{font-size:18px;font-weight:800}
+#auForm .au-s{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+#auForm .au-l{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin:10px 0 4px}
+#auForm .au-i{width:100%;padding:10px 11px;border-radius:10px;font-size:14px}
+#auForm .au-c{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:11.5px;font-weight:600;cursor:pointer}
+#auForm .au-c span{color:var(--muted);font-weight:500}
+#auForm .au-b{width:100%;margin-top:14px;padding:11px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer}
+#auForm .au-b:disabled{opacity:.6}
+#auForm .au-m{margin-top:10px;font-size:11.5px;font-weight:600;white-space:pre-line;text-align:center;min-height:14px}
+#auForm .au-srv{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
+#auForm .au-srv-t,#auForm .au-b2{width:100%;padding:7px;border:1px solid var(--line);background:transparent;border-radius:9px;font-size:11.5px;font-weight:700;color:var(--ink);cursor:pointer}
+#auForm .au-b2{flex:1}
+#auForm .au-f{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);font-size:11px;color:var(--muted);line-height:1.6}
+#auChip{display:inline-flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap}
+#auChip b{font-weight:700}
+#auChip small{color:var(--accent)}
+#syncChip{font-size:12px;white-space:nowrap;cursor:pointer;padding:3px 8px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--muted)}
+#syncChip.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}
+#syncChip.busy{color:var(--accent)}
+#syncChip.err{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transparent)}
+#verChip{font-size:11px;color:var(--muted)}
+#updBar{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:9000;background:var(--panel);border:1px solid var(--accent);border-radius:10px;box-shadow:var(--shadow);padding:10px 14px;display:flex;gap:10px;align-items:center;font-size:13px}
+@media print{#auGate,#updBar{display:none!important}}
+</style>
+</head>
+<body>
+<header class="top no-print">
+  <h1>코일 슬리팅 조합 · 발주기</h1>
+  <div class="hbar">
+    <button class="sm" id="tOrder" aria-pressed="false" title="발주 정보 입력 창 열기/닫기">발주 정보</button>
+    <button class="sm" id="tSheet" aria-pressed="false" title="발주서 미리보기 열기/닫기">발주서 미리보기</button>
+    <button class="sm pri" id="print">발주서 인쇄 / PDF</button>
+    <button class="sm" id="copy">발주 내용 텍스트 복사</button>
+    <button class="sm" id="xlsx">엑셀(xlsx) 저장</button>
+    <span id="msg" class="muted"></span>
+  </div>
+  <div class="linkbar">
+    <span id="linkStat"><span class="dot"></span>연동 확인 중…</span>
+    <button class="sm" id="relink" title="매입분석·영업분석 도구에 저장된 데이터를 다시 읽습니다">↻ 다시 불러오기</button>
+    <button class="sm" id="importBtn" title="매입/매출 ERP 엑셀을 직접 불러옵니다">엑셀 불러오기</button>
+    <input type="file" id="importFile" accept=".xlsx,.xls,.csv" multiple hidden>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- 4. 발주 정보 -->
+  <section class="panel no-print toppanel" id="orderPanel" hidden>
+    <h2>발주 정보<button class="sm pclose" data-close="orderPanel" title="닫기">✕</button></h2>
+    <div class="row">
+      <label class="f">원자재 매입처 (매입분석 연동)
+        <div class="combo" id="supCombo">
+          <input id="supIn" type="text" placeholder="매입처 검색 · 선택" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="supList">
+          <button type="button" class="cb-btn" id="supBtn" tabindex="-1" aria-label="매입처 목록 열기">▾</button>
+          <div class="cb-list" id="supList" role="listbox" hidden></div>
+        </div>
+      </label>
+      <label class="f">공급사명 (발주서 표기)<input data-h="supplier" style="width:170px"></label>
+      <label class="f">발주처(당사)<input data-h="company" style="width:150px"></label>
+      <label class="f">담당자<input data-h="person" style="width:90px"></label>
+      <label class="f">연락처<input data-h="tel" style="width:120px"></label>
+      <label class="f">발주일<input data-h="date" type="date"></label>
+      <label class="f">납기 요청일<input data-h="due" type="date"></label>
+      <label class="f">납품장소<input data-h="place" style="width:170px"></label>
+    </div>
+    <div id="supInfo" class="muted" style="font-size:12px;margin-top:6px"></div>
+    <div class="row" style="margin-top:10px">
+      <label class="f">코일 내경 (ID)
+        <select data-h="id"><option>508</option><option>610</option><option>762</option></select>
+      </label>
+      <label class="f">최대 외경 OD (mm)<input data-h="od" type="number" style="width:90px"></label>
+      <label class="f">슬릿코일 최대중량 (kg)<input data-h="maxw" type="number" style="width:100px"></label>
+      <label class="f">폭 공차<input data-h="tol" style="width:90px"></label>
+      <label class="f">도금량/표면<input data-h="coat" style="width:110px" placeholder="예: Z12, 오일"></label>
+      <label class="f">포장<input data-h="pack" style="width:150px"></label>
+    </div>
+    <label class="f" style="margin-top:10px">비고
+      <textarea data-h="note" rows="2" style="width:100%"></textarea>
+    </label>
+  </section>
+
+  <!-- 5. 발주서 -->
+  <section class="panel toppanel" id="sheetPanel" hidden>
+    <h2 class="no-print">발주서 미리보기<button class="sm pclose" data-close="sheetPanel" title="닫기">✕</button></h2>
+    <div class="sheet" id="sheet"></div>
+  </section>
+
+  <!-- 1. 코일 그림 -->
+  <section class="panel no-print">
+    <h2><span class="num">1</span>코일(원판) 슬리팅 배열</h2>
+    <div class="cfg">
+      <div class="cg">
+        <div class="cg-t">원자재 규격</div>
+        <div class="cg-r">
+          <label class="cf">재질 (강종)<select id="mat" class="matsel strong" style="width:200px"></select></label>
+          <label class="cf">두께 (mm)<input id="thk" class="strong" type="number" step="0.05" min="0.1" style="width:84px"></label>
+        </div>
+      </div>
+      <div class="cg">
+        <div class="cg-t">코일 폭</div>
+        <div class="cg-r">
+          <label class="cf">폭 (mm)<input id="mw" class="strong big2" type="number" min="100" max="2500" step="1" style="width:100px"></label>
+          <div class="cf"><span>빠른 선택</span><div class="chips" id="presets"></div></div>
+        </div>
+      </div>
+      <div class="cg">
+        <div class="cg-t">슬리팅 조건</div>
+        <div class="cg-r">
+          <label class="cf">최소 트림 (mm)<input id="trim" type="number" min="0" step="1" style="width:76px"></label>
+          <label class="cf">최대 슬릿 수<input id="lanes" type="number" min="1" max="60" step="1" style="width:70px"></label>
+          <label class="cf">최소 슬릿폭 (mm)<input id="minslit" type="number" min="1" step="1" style="width:76px"></label>
+          <div class="cf"><span>잔폭 처리</span><label class="cbox"><input id="fill" type="checkbox"> 재고보충 슬릿으로 채우기</label></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ctabs">
+      <div class="tabs" id="tabs" role="tablist"></div>
+      <span id="coilTitle" class="muted"></span>
+    </div>
+    <div class="topgrid">
+      <div>
+        <svg id="coil" class="coil-svg" viewBox="0 0 1000 330" role="img" aria-label="코일 슬리팅 배열 그림"></svg>
+      </div>
+      <aside class="manual" id="coilPanel" hidden></aside>
+      <aside class="manual" id="autoPanel">
+        <h3>직접 입력 (폭 · 수량)</h3>
+        <div class="muted" style="font-size:12px" id="manualSpec"></div>
+        <div class="mhead"><span></span><span>폭 (mm)</span><span>수량 (본)</span><span></span></div>
+        <div id="mrows"></div>
+        <button class="sm" id="maddRow" style="width:100%">＋ 폭 추가</button>
+        <div class="msum"><span id="msumW"></span><span id="msumL"></span></div>
+        <div class="muted" style="font-size:11.5px;margin-top:6px">Enter 키를 누르면 아래 줄이 추가됩니다. 아래 재고 리스트에서 체크한 폭과 함께 조합됩니다.</div>
+      </aside>
+    </div>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <div class="grid2 no-print">
+    <!-- 2. 재고 -->
+    <section class="panel">
+      <h2 class="h2s"><span class="num">2</span>코일 재고 · 주문 폭 선택
+        <span class="srch"><input id="q" type="search" placeholder="폭·강종 검색 (예: 300, 1.6x300, 200~400)" autocomplete="off" aria-label="재고 검색"><span id="qCnt"></span></span></h2>
+      <div class="ibar">
+        <span id="listSpec" class="ib-spec"></span>
+        <label class="ib-item"><input type="checkbox" id="showAll"> 전체 강종·두께</label>
+        <label class="ib-item">목표재고 <input id="target" type="number" min="0.5" step="0.5"> 개월</label>
+        <span class="ib-gap"></span>
+        <button class="ib-btn" id="selShort">부족 품목 자동선택</button>
+        <button class="ib-btn" id="selNone">선택 해제</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead id="invHead"><tr>
+            <th></th><th data-sort="mat">재질</th><th class="r" data-sort="t">두께</th><th class="r" data-sort="w">폭</th>
+            <th class="r" data-sort="stock">현재고(kg)</th><th class="r" data-sort="avg">월평균매입(kg)</th><th class="r" data-sort="cover">재고개월</th><th data-sort="cycle">발주주기</th><th data-sort="status">상태</th><th class="r" data-sort="qty">주문(본)</th>
+          </tr></thead>
+          <tbody id="inv"></tbody>
+        </table>
+      </div>
+      <details style="margin-top:12px">
+        <summary style="cursor:pointer;font-weight:600">재고 품목 직접 추가 (연동 데이터에 없는 폭)</summary>
+        <div class="row" style="margin-top:8px">
+          <label class="f">재질(강종)<select id="nMat" class="matsel" style="width:170px"></select></label>
+          <label class="f">두께(t)<input id="nT" type="number" step="0.05" style="width:70px"></label>
+          <label class="f">폭(mm)<input id="nW" type="number" step="0.5" style="width:80px"></label>
+          <label class="f">현재고(kg)<input id="nS" type="number" value="0" style="width:90px"></label>
+          <label class="f">월사용(kg)<input id="nU" type="number" value="0" style="width:90px"></label>
+          <button class="pri" id="add">추가</button>
+        </div>
+      </details>
+      <ul class="tips">
+        <li><b>행을 클릭</b>하면 오른쪽에 매입·사용품목·매출처 상세가 열립니다. 체크박스는 주문에 넣기/빼기입니다.</li>
+        <li>재고개월 = 현재고 ÷ 월평균매입. 목표재고 개월보다 부족한 만큼을 슬릿코일 본수로 환산해 주문수량 기본값으로 넣습니다.</li>
+      </ul>
+    </section>
+
+    <!-- 3. 결과 -->
+    <section class="panel">
+      <h2><span class="num">3</span><span id="resTitle">최적 조합 결과</span></h2>
+      <div id="result"></div>
+    </section>
+  </div>
+
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="dh"><h3 id="dTitle"></h3><span id="dBadge"></span>
+    <button class="sm" id="dToggle" style="margin-left:auto"></button>
+    <button class="sm" id="dClose" aria-label="닫기">✕</button></div>
+  <div class="db" id="dBody"></div>
+</aside>
+
+<script>
+(function(){
+"use strict";
+const KEY="coilOrderTool.v2";
+const PALETTE=["#2f6db5","#d9822b","#2e9e6a","#8e5cc4","#c2464b","#1f9aa8","#a07a1f","#5c6bc0","#d0578f","#4f8a3c","#7a5548","#3a7ca5"];
+/* 가공비 견적(press_cost_estimator)의 강종 · 비중 */
+const GRADES=[["EGI","전기아연도금",7.89],["PO","산세강판",7.85],["HGI","용융아연도금",7.85],["CR","냉연",7.85],["STS201","",7.93],["STS304","",7.93],["STS430","",7.7]];
+const GRADE_DENS=Object.fromEntries(GRADES.map(g=>[g[0],g[2]]));
+const today=new Date().toISOString().slice(0,10);
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=(n,d=0)=>Number(n||0).toLocaleString("ko-KR",{minimumFractionDigits:d,maximumFractionDigits:d});
+const fw=w=>(Math.round(w*10)%10===0?String(Math.round(w)):(Math.round(w*10)/10).toString());
+const t2=t=>Number(t).toFixed(2);
+const tl=t=>String(Number(t));
+const won=n=>{n=+n||0;const a=Math.abs(n);if(a>=1e8)return (n/1e8).toFixed(2)+"억";if(a>=1e4)return fmt(n/1e4)+"만";return fmt(n);};
+const density=mat=>GRADE_DENS[String(mat||"").toUpperCase()]||(/^STS/i.test(mat)?7.93:7.85);
+const normMat=m=>String(m||"").trim().toUpperCase().replace(/^SUS/,"STS");
+const itemKey=(mat,t,w)=>normMat(mat)+"|"+t2(t)+"|"+fw(+w);
+const specKey=(mat,t)=>normMat(mat)+"|"+t2(t);
+const specLabel=k=>{const [m,t]=k.split("|");return (m||"?")+" "+tl(t)+"t";};
+
+/* ---------- 저장 상태 ---------- */
+const defaults={
+  mat:"EGI",t:1.0,mw:1219,trim:10,lanes:20,minslit:30,fill:false,showAll:false,target:2,
+  manualRows:[{w:"",q:""}],manual:[],sel:{},groupWeights:{},presets:[914,1000,1219,1250,1524],
+  header:{supplier:"",company:"",person:"",tel:"",date:today,due:"",place:"",id:"610",od:"1500",maxw:"",tol:"+0.3 / -0",coat:"",pack:"수평포장(아이투스카이), 방청지",note:""}
+};
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY))||null;}catch(e){S=null;}
+S=Object.assign(JSON.parse(JSON.stringify(defaults)),S||{});
+S.header=Object.assign({},defaults.header,S.header||{});
+if(!Array.isArray(S.manualRows)||!S.manualRows.length)S.manualRows=[{w:"",q:""}];
+if(!Array.isArray(S.coils))S.coils=[];
+if(!Array.isArray(S.fixed))S.fixed=[];
+if(!S.locked||typeof S.locked!=="object")S.locked={};   // 소폭을 지우거나 넣어 손으로 고친 자동 조합: 규격별 패턴 목록 {key:[{rep,lanes:[{w,extra}]}]} — ‘최적화’ 버튼 전까지 그대로 유지   // 자동 조합에서 소폭을 지워 고정한 패턴 {id,key,rep,lanes:[폭…]}
+/* v4에서 고정한 패턴은 v5부터 쓰지 않음 → 주문 수량으로 되돌려 다시 자동 조합되게 함 */
+if(S.fixed.length){
+  S.fixed.forEach(f=>{const n={};(f.lanes||[]).forEach(w=>n[w]=(n[w]||0)+(+f.rep||1));
+    Object.keys(n).forEach(w=>{
+      if(f.key===specKey(S.mat,S.t)){const r=S.manualRows.find(x=>Math.abs(+x.w-w)<1e-6);if(r)r.q=String((+r.q||0)+n[w]);else S.manualRows.push({w:String(+w),q:String(n[w])});}
+      else{const [m,t]=f.key.split("|");const k=itemKey(m,t,w);S.sel[k]=(+S.sel[k]||0)+n[w];}
+    });});
+  S.manualRows=S.manualRows.filter(r=>+r.w>0&&+r.q>0); if(!S.manualRows.length)S.manualRows=[{w:"",q:""}];
+  S.fixed=[];
+}
+if(!S.tab||(S.tab!=="auto"&&!S.coils.some(c=>c.id===S.tab)))S.tab="auto";
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} if(typeof window.__coilOnSave==='function'&&!window.__coilApplying){try{window.__coilOnSave();}catch(e){}}}
+
+/* ============================================================
+   연동: 매입분석(dbpastec_purchase) · 영업분석(dbpastec_sales) IndexedDB 읽기 전용
+   ============================================================ */
+const L={pur:[],sal:[],invYm:"",invRaw:[],invProd:[],src:{pur:"",sal:"",inv:""},ratio:55,yld:85};
+let IDX=null;
+
+async function idbRead(name,key){
+  try{
+    if(!window.indexedDB)return null;
+    if(indexedDB.databases){const list=await indexedDB.databases();if(!list.some(d=>d.name===name))return null;}
+    return await new Promise(res=>{
+      let created=false;
+      const rq=indexedDB.open(name);
+      rq.onupgradeneeded=()=>{created=true;try{rq.transaction.abort();}catch(e){}};
+      rq.onerror=()=>res(null);
+      rq.onblocked=()=>res(null);
+      rq.onsuccess=()=>{
+        const db=rq.result;
+        if(created||!db.objectStoreNames.contains("kv")){db.close();return res(null);}
+        try{
+          const g=db.transaction("kv","readonly").objectStore("kv").get(key);
+          g.onsuccess=()=>{db.close();res(g.result==null?null:g.result);};
+          g.onerror=()=>{db.close();res(null);};
+        }catch(e){db.close();res(null);}
+      };
+    });
+  }catch(e){return null;}
+}
+const flat=ds=>Array.isArray(ds)?ds.reduce((a,d)=>a.concat(Array.isArray(d.recs)?d.recs:[]),[]):[];
+
+async function loadLinked(){
+  $("#linkStat").innerHTML='<span class="dot"></span>연동 확인 중…';
+  const [pds,sds,minv]=await Promise.all([idbRead("dbpastec_purchase","datasets"),idbRead("dbpastec_sales","datasets"),idbRead("dbpastec_sales","minv_months_v1")]);
+  const p=flat(pds), s=flat(sds);
+  if(p.length){L.pur=p;L.src.pur="매입분석";}
+  if(s.length){L.sal=s;L.src.sal="영업분석";}
+  if(minv&&minv.months){
+    const yms=Object.keys(minv.months).filter(k=>minv.months[k]&&minv.months[k].r).sort();
+    if(yms.length){setInv(minv.months[yms[yms.length-1]],yms[yms.length-1]);L.src.inv="영업분석";}
+  }
+  // 영업분석 「원자재 사용추이」의 재료비 비율·수율 설정을 그대로 사용
+  if(minv&&minv.ui){if(+minv.ui.ratio>0)L.ratio=+minv.ui.ratio;if(+minv.ui.yield>0)L.yld=+minv.ui.yield;}
+  buildIndex(); renderLinkStat(); refresh();
+}
+function setInv(m,ym){
+  const K=m.k||[]; const rows=(m.r||[]).map(a=>{const o={};K.forEach((k,i)=>o[k]=a[i]);o.stock=(+o.qty||0)||(+o.semi||0);return o;});
+  L.invYm=ym; L.invRaw=rows.filter(r=>r.cat==="원자재"); L.invProd=rows.filter(r=>r.cat!=="원자재"&&r.cat!=="매출이월"&&r.mat);
+}
+function renderLinkStat(){
+  const parts=[];
+  // 매입·매출 행 수 표시는 제거(사용자 요청) — 마우스를 올리면 제목 풍선에서 확인
+  parts.push(L.invYm?`<span class="dot on"></span>재고 ${esc(L.invYm)}`:`<span class="dot off"></span>월재고 없음`);
+  $("#linkStat").innerHTML=parts.join(" &nbsp; ");
+  $("#linkStat").title=(L.pur.length||L.sal.length)?`매입분석·영업분석 도구의 저장 데이터를 읽었습니다(읽기 전용).\n매입 ${fmt(L.pur.length)}행 · 매출 ${fmt(L.sal.length)}행`:"같은 브라우저에서 매입분석·영업분석 도구를 열어 데이터를 불러온 뒤 ‘다시 불러오기’를 누르거나, ‘엑셀 불러오기’로 ERP 파일을 직접 여세요.";
+}
+
+/* ---------- 규격 해석 ---------- */
+const GRX=/(?:^|[^A-Z])(STS\s*\d{3}|SUS\s*\d{3}|STS|SUS|SPCC|SPHC|SGCC|SECC|SGLCC|SAPH\d*|HGI|EGI|GA|GI|PO|CR|AL\d{0,4})(?=$|[^A-Z])/;
+function gradeOf(...vals){
+  for(const v of vals){const m=String(v||"").toUpperCase().match(GRX);if(m)return normMat(m[1].replace(/\s+/g,""));}
+  return "";
+}
+function coilTW(spec){
+  let s=String(spec||"").trim();
+  if(/^[\d.]+(\s+[\d.]+)+$/.test(s))s=s.split(/\s+/).join("x");
+  s=s.toLowerCase().replace(/\s+/g,"").replace(/[×*＊]/g,"x");
+  const nums=s.match(/\d+(?:\.\d+)?/g);
+  if(!nums||nums.length!==2)return null;
+  const m=s.match(/^t?([\d.]+)t?x([\d.]+)(?:xc|c)?$/); if(!m)return null;
+  const t=parseFloat(m[1]),w=parseFloat(m[2]);
+  if(!(t>0&&t<=12&&w>=5&&w<=2600))return null;
+  return {t,w};
+}
+const ymOf=d=>String(d||"").slice(0,7);
+function ymAdd(ym,n){let [y,m]=ym.split("-").map(Number);m+=n;while(m<1){m+=12;y--;}while(m>12){m-=12;y++;}return y+"-"+String(m).padStart(2,"0");}
+function ymRange(end,n){const a=[];for(let i=n-1;i>=0;i--)a.push(ymAdd(end,-i));return a;}
+
+function buildIndex(){
+  const I={items:new Map(),purByKey:new Map(),vendors:new Map(),purEnd:"",salEnd:"",salByCode:new Map(),prodBySpec:new Map(),mats:new Set()};
+  // 매입
+  L.pur.forEach(r=>{
+    const tw=coilTW(r.spec); if(!tw)return;
+    const g=gradeOf(r.small,r.mid,r.name,r.big,r.group,r.code);
+    const isRaw=/원자재|COIL|코일/i.test([r.big,r.mid,r.small,r.name].join(" "));
+    if(!g&&!isRaw)return;
+    const mat=g||"기타", k=itemKey(mat,tw.t,tw.w), ym=ymOf(r.d);
+    const o={k,mat,t:tw.t,w:tw.w,d:r.d,ym,vendor:r.vendor||"(미상)",qty:+r.qty||0,amt:+r.supply||+r.total||0,unit:r.unit||""};
+    if(!I.purByKey.has(k))I.purByKey.set(k,[]); I.purByKey.get(k).push(o);
+    if(ym>I.purEnd)I.purEnd=ym;
+    I.mats.add(mat);
+  });
+  L.pur.forEach(r=>{const v=r.vendor||"(미상)";const x=I.vendors.get(v)||{amt:0,n:0,last:""};x.amt+=+r.supply||0;x.n++;if(r.d>x.last)x.last=r.d;I.vendors.set(v,x);});
+  // 매출
+  L.sal.forEach(r=>{const c=String(r.code||"").trim();if(!c)return;if(!I.salByCode.has(c))I.salByCode.set(c,[]);I.salByCode.get(c).push(r);const ym=ymOf(r.d);if(ym>I.salEnd)I.salEnd=ym;});
+  // 월재고 원자재
+  const invKg=new Map();
+  const invPrice=new Map();
+  L.invRaw.forEach(r=>{const tw=coilTW(r.spec);if(!tw)return;const mat=gradeOf(r.name,r.code)||"기타";const k=itemKey(mat,tw.t,tw.w);invKg.set(k,(invKg.get(k)||0)+(+r.stock||0));if(+r.cost>0)invPrice.set(k,Math.max(invPrice.get(k)||0,+r.cost));I.mats.add(mat);});
+  I.invPrice=invPrice;
+  // 사용품목(자재품목 → 원자재 규격)
+  L.invProd.forEach(r=>{
+    const s=String(r.mat||"").trim(); const m=s.match(/^(.*?)\s*([\d.]+\s*[x×*X]\s*[\d.]+(?:\s*[x×*X]\s*[\d.]+)?)\s*$/);
+    let spec=m?m[2]:s, nm=m?m[1]:"";
+    if(!m){const mm=s.match(/([\d.]+)\s+([\d.]+)\s*$/);if(mm){spec=mm[1]+"x"+mm[2];nm=s.slice(0,mm.index);}}
+    const tw=coilTW(spec); if(!tw)return;
+    const sk=t2(tw.t)+"|"+fw(tw.w); const g=gradeOf(nm);
+    if(!I.prodBySpec.has(sk))I.prodBySpec.set(sk,new Map());
+    const pm=I.prodBySpec.get(sk), pk=(r.code||"")+"│"+(r.spec||"");
+    if(!pm.has(pk))pm.set(pk,{code:String(r.code||"").trim(),name:r.name||"",spec:r.spec||"",cat:r.cat||"",grade:g,stock:0,cost:+r.cost||0});
+    pm.get(pk).stock+=+r.stock||0;
+  });
+  // 품목 목록 합치기
+  const add=(k,mat,t,w)=>{if(!I.items.has(k))I.items.set(k,{k,mat,t:+t,w:+w,stockKg:null,manual:false});return I.items.get(k);};
+  I.purByKey.forEach((arr,k)=>add(k,arr[0].mat,arr[0].t,arr[0].w));
+  invKg.forEach((kg,k)=>{const [m,t,w]=k.split("|");add(k,m,t,w).stockKg=kg;});
+  (S.manual||[]).forEach(x=>{const k=itemKey(x.mat,x.t,x.w);const it=add(k,normMat(x.mat),x.t,x.w);it.manual=true;it.manualStock=+x.stock||0;it.manualUse=+x.use||0;if(it.stockKg==null)it.stockKg=it.manualStock;});
+  // 매입 통계
+  I.items.forEach(it=>{it.ps=purStats(I,it.k);if(it.manual&&!it.ps.avgM&&it.manualUse)it.ps.avgM=it.manualUse;});
+  IDX=I;
+}
+function fillMatSelects(){
+  const opts=GRADES.map(([k,d,s])=>`<option value="${k}">${k}${d?" ("+d+")":""} · ${s}</option>`).join("");
+  document.querySelectorAll("select.matsel").forEach(el=>{el.innerHTML=opts;});
+}
+
+function purStats(I,k){
+  const arr=(I.purByKey.get(k)||[]).slice().sort((a,b)=>a.d<b.d?-1:1);
+  const out={n:arr.length,avgM:0,yearQty:0,yearAmt:0,months:[],byYear:{},vendors:[],cycle:null,last:"",unit:""};
+  if(!arr.length)return out;
+  const end=I.purEnd, win=ymRange(end,12), ws=new Set(win), mq={};
+  const units={}; arr.forEach(r=>{units[r.unit]=(units[r.unit]||0)+1;});
+  out.unit=Object.keys(units).sort((a,b)=>units[b]-units[a])[0]||"KG";
+  const vm=new Map();
+  arr.forEach(r=>{
+    const y=r.d.slice(0,4); const by=out.byYear[y]||(out.byYear[y]={qty:0,amt:0}); by.qty+=r.qty; by.amt+=r.amt;
+    if(ws.has(r.ym)){out.yearQty+=r.qty;out.yearAmt+=r.amt;mq[r.ym]=(mq[r.ym]||0)+r.qty;}
+    const v=vm.get(r.vendor)||{vendor:r.vendor,qty:0,amt:0,yqty:0,last:"",n:0}; v.qty+=r.qty;v.amt+=r.amt;v.n++;if(ws.has(r.ym))v.yqty+=r.qty;if(r.d>v.last)v.last=r.d; vm.set(r.vendor,v);
+  });
+  out.avgM=out.yearQty/12;
+  out.months=win.map(ym=>({ym,qty:mq[ym]||0}));
+  out.vendors=[...vm.values()].sort((a,b)=>b.amt-a.amt);
+  const dates=[...new Set(arr.map(r=>r.d))].sort(); out.last=dates[dates.length-1];
+  if(dates.length>=2){
+    const recent=dates.slice(-13), gaps=[];
+    for(let i=1;i<recent.length;i++)gaps.push((new Date(recent[i])-new Date(recent[i-1]))/864e5);
+    const avg=gaps.reduce((a,b)=>a+b,0)/gaps.length;
+    const next=new Date(new Date(out.last).getTime()+avg*864e5).toISOString().slice(0,10);
+    out.cycle={days:avg,count:dates.length,next};
+  }
+  return out;
+}
+
+function salesFor(code){
+  const arr=IDX.salByCode.get(code)||[]; const end=IDX.salEnd; const ws=new Set(ymRange(end||"0000-01",12));
+  const o={qty:0,amt:0,custs:new Map(),months:{},lenSum:0,lenQty:0};
+  arr.forEach(r=>{
+    // 비고(내역)의 [길이] — 영업분석과 같은 방식으로 EA당 길이(mm) 평균
+    const lm=String(r.bigo||"").match(/\[\s*(\d+)\s*\]/); if(lm&&+r.qty>0){o.lenSum+=+lm[1]*+r.qty;o.lenQty+=+r.qty;}
+    const ym=ymOf(r.d);if(!ws.has(ym))return;const a=+r.supply||+r.total||0,q=+r.qty||0;o.qty+=q;o.amt+=a;
+    const c=r.cust||"(미상)";const x=o.custs.get(c)||{cust:c,qty:0,amt:0};x.qty+=q;x.amt+=a;o.custs.set(c,x);});
+  o.custList=[...o.custs.values()].sort((a,b)=>b.amt-a.amt);
+  return o;
+}
+function productsFor(it){
+  const pm=IDX.prodBySpec.get(t2(it.t)+"|"+fw(it.w)); if(!pm)return [];
+  return [...pm.values()].filter(p=>!p.grade||p.grade===it.mat).map(p=>Object.assign({},p,{sales:salesFor(p.code)})).sort((a,b)=>b.sales.amt-a.sales.amt);
+}
+
+/* ---------- 엑셀 직접 불러오기 (연동 데이터가 없을 때) ---------- */
+const PCOL={date:["입고일자","입고일","일자","전표일자"],vendor:["거래처","거래처명","업체명","매입처"],code:["품번","품목코드"],name:["품명","품목명"],spec:["규격"],unit:["단위"],qty:["입고수량","수량"],supply:["공급가","공급가액"],total:["합계액","합계"],big:["품목대분류"],mid:["품목중분류"],small:["품목소분류"]};
+const SCOL={date:["출고일자"],cust:["고객","거래처"],code:["품번"],name:["품명"],spec:["규격"],qty:["출고수량","수량"],supply:["공급가","공급가액"],total:["합계액","합계"]};
+function toD(v){if(v instanceof Date)return v;if(typeof v==="number"&&v>20000&&v<80000)return new Date(Math.round((v-25569)*864e5));const s=String(v||"").trim().replace(/[./]/g,"-");const m=s.match(/^(\d{4})-?(\d{1,2})-?(\d{1,2})/);return m?new Date(+m[1],+m[2]-1,+m[3]):null;}
+const toN=v=>typeof v==="number"?v:(+String(v||"").replace(/[,\s원]/g,"")||0);
+const dstr=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+async function importFiles(files){
+  if(typeof XLSX==="undefined"){alert("엑셀 기능을 불러오지 못했습니다. 인터넷 연결 후 다시 열어주세요.");return;}
+  let np=0,ns=0;
+  for(const f of files){
+    try{
+      const wb=XLSX.read(new Uint8Array(await f.arrayBuffer()),{type:"array",cellDates:true});
+      wb.SheetNames.forEach(sn=>{
+        const a=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:null}); if(!a.length)return;
+        let hi=a.findIndex(r=>r&&r.some(c=>/입고일자|출고일자/.test(String(c||"")))); if(hi<0)return;
+        const h=a[hi].map(x=>String(x==null?"":x).trim()), sales=h.includes("출고일자")&&!h.includes("입고일자");
+        const MAP=sales?SCOL:PCOL, c={}; for(const k in MAP)c[k]=h.findIndex(x=>MAP[k].includes(x));
+        a.slice(hi+1).forEach(r=>{const d=toD(r[c.date]);if(!d)return;const o={d:dstr(d)};for(const k in MAP){if(k==="date")continue;const v=c[k]>=0?r[c[k]]:null;o[k]=["qty","supply","total"].includes(k)?toN(v):String(v==null?"":v).trim();}
+          if(sales){L.sal.push(o);ns++;}else{L.pur.push(o);np++;}});
+      });
+    }catch(e){alert(`'${f.name}' 읽기 오류: ${e.message}`);}
+  }
+  if(np)L.src.pur="엑셀"; if(ns)L.src.sal="엑셀";
+  buildIndex(); renderLinkStat(); refresh();
+  msg(`불러옴: 매입 ${fmt(np)}행 · 매출 ${fmt(ns)}행 (이 창을 닫으면 다시 불러와야 합니다)`);
+}
+
+/* ============================================================
+   최적화 (1차원 절단: 패턴 탐색 + 반복)
+   ============================================================ */
+function bestPattern(ws,remain,cap,maxLanes,moreLanes){
+  const n=ws.length,cnt=new Array(n).fill(0),suffix=new Array(n+1).fill(0);
+  for(let i=n-1;i>=0;i--)suffix[i]=suffix[i+1]+ws[i]*remain[i];
+  let best={used:-1,lanes:0,c:null},nodes=0;
+  (function dfs(i,used,lanes){
+    nodes++;
+    if(used>best.used||(used===best.used&&(moreLanes?lanes>best.lanes:lanes<best.lanes)))best={used,lanes,c:cnt.slice()};
+    if(nodes>150000||i>=n)return;
+    if(best.used===cap&&!moreLanes)return;
+    if(used+Math.min(cap-used,suffix[i])<best.used)return;
+    const w=ws[i],mx=Math.min(remain[i],Math.floor((cap-used)/w),maxLanes-lanes);
+    for(let c=mx;c>=0;c--){cnt[i]=c;dfs(i+1,used+c*w,lanes+c);}
+    cnt[i]=0;
+  })(0,0,0);
+  return best;
+}
+function optimizeGroup(items,W,trim,maxLanes,fill){
+  const cap=Math.round((W-trim)*10),map={};
+  items.forEach(it=>{const k=Math.round(it.w*10);map[k]=(map[k]||0)+Math.max(0,Math.floor(+it.qty||0));});
+  const ws=Object.keys(map).map(Number).sort((a,b)=>b-a),remain=ws.map(w=>map[w]);
+  const errors=[],patterns=[];
+  ws.forEach((w,i)=>{if(w>cap){errors.push(fw(w/10)+"mm 폭은 코일 유효폭("+fw(cap/10)+"mm)보다 커서 조합 불가");remain[i]=0;}});
+  /* 여러 방식으로 배열해 보고 코일 본수가 가장 적은 것을 채택
+     ① 사용폭 최대·슬릿 적게  ② 사용폭 최대·슬릿 많게(작은 폭 먼저 소진)  ③④ 위 둘을 1본씩 다시 계산 */
+  const totalQty=remain.reduce((a,b)=>a+b,0);
+  const variants=[[false,false],[true,false]].concat(totalQty<=300?[[false,true],[true,true]]:[]);
+  let bestRun=null;
+  variants.forEach(([more,single])=>{
+    const rem=remain.slice(), pats=[]; let guard=0;
+    while(rem.some(r=>r>0)&&guard++<600){
+      const b=bestPattern(ws,rem,cap,maxLanes,more); if(!b.c||b.used<=0)break;
+      let rep=Infinity; b.c.forEach((c,i)=>{if(c>0)rep=Math.min(rep,Math.floor(rem[i]/c));}); rep=single?1:Math.max(1,rep);
+      b.c.forEach((c,i)=>{rem[i]=Math.max(0,rem[i]-c*rep);});
+      pats.push({c:b.c,rep,used:b.used});
+    }
+    // 같은 패턴 합치기
+    const m=new Map(); pats.forEach(p=>{const k=p.c.join(",");if(m.has(k))m.get(k).rep+=p.rep;else m.set(k,{...p});});
+    const run=[...m.values()], coils=run.reduce((a,p)=>a+p.rep,0), waste=run.reduce((a,p)=>a+(cap-p.used)*p.rep,0);
+    if(!bestRun||coils<bestRun.coils||(coils===bestRun.coils&&(waste<bestRun.waste||(waste===bestRun.waste&&run.length<bestRun.run.length))))bestRun={run,coils,waste};
+  });
+  (bestRun?bestRun.run:[]).sort((a,b)=>b.used-a.used||b.rep-a.rep).forEach(p=>{
+    const lanes=[]; p.c.forEach((c,i)=>{for(let k=0;k<c;k++)lanes.push({w:ws[i]/10,extra:false});});
+    let used=p.used,nl=lanes.length;
+    if(fill){for(const w of ws){while(used+w<=cap&&nl<maxLanes){lanes.push({w:w/10,extra:true});used+=w;nl++;}}}
+    lanes.sort((a,b)=>b.w-a.w||(a.extra-b.extra));
+    patterns.push({lanes,rep:p.rep,used:used/10});
+  });
+  return {patterns,errors};
+}
+
+let plan=[],active={g:0,p:0},selLane=null;   // selLane: 메인 그림에서 선택한 소폭들 {g,p,ii:[인덱스…]} (여러 개 선택 가능)
+function demandList(){
+  const out=[];
+  Object.keys(S.sel).forEach(k=>{const q=+S.sel[k];if(!(q>0))return;const [m,t,w]=k.split("|");out.push({spec:m+"|"+t,w:+w,qty:q,from:"list"});});
+  S.manualRows.forEach(r=>{const w=+r.w,q=+r.q;if(w>0&&q>0&&S.mat&&S.t>0)out.push({spec:specKey(S.mat,S.t),w,qty:q,from:"manual"});});
+  return out;
+}
+function runOptimize(){
+  const dl=demandList(),groups={};
+  dl.forEach(d=>{(groups[d.spec]=groups[d.spec]||[]).push(d);});
+  const warn=[];
+  dl.forEach(d=>{if(d.w<S.minslit)warn.push(specLabel(d.spec)+" "+fw(d.w)+"mm: 최소 슬릿폭("+S.minslit+"mm) 미만 — 공급사 가능 여부 확인 필요");});
+  // 고정 패턴(소폭을 지워 수정한 자동 조합 패턴)은 다시 계산하지 않고 같은 규격 묶음 맨 위에 그대로 표시
+  // 손으로 고친 규격(S.locked)은 고친 패턴을 그대로 두고, 그 패턴으로 못 채운 주문만 새로 조합해 뒤에 붙임
+  Object.keys(S.locked).forEach(k=>{S.locked[k]=(S.locked[k]||[]).filter(p=>p&&Array.isArray(p.lanes)&&p.lanes.length&&+p.rep>0);if(!S.locked[k].length)delete S.locked[k];});
+  const keys=[...new Set(Object.keys(groups).concat(Object.keys(S.locked)))];
+  plan=keys.sort((a,b)=>(a===specKey(S.mat,S.t)?-1:b===specKey(S.mat,S.t)?1:a.localeCompare(b))).map(k=>{
+    const lk=(S.locked[k]||[]).map(p=>{const lanes=p.lanes.map(l=>({w:+l.w,extra:!!l.extra}));return {lanes,rep:+p.rep,used:Math.round(lanes.reduce((a,l)=>a+l.w,0)*10)/10,mw:S.mw,locked:true};});
+    const made={}; lk.forEach(p=>p.lanes.forEach(l=>{if(!l.extra){const x=Math.round(l.w*10);made[x]=(made[x]||0)+p.rep;}}));
+    const rest=(groups[k]||[]).map(d=>{const x=Math.round(d.w*10),take=Math.min(made[x]||0,+d.qty||0);made[x]=(made[x]||0)-take;return {...d,qty:(+d.qty||0)-take};}).filter(d=>d.qty>0);
+    const r=optimizeGroup(rest,S.mw,S.trim,S.lanes,S.fill);
+    r.patterns.forEach(p=>p.mw=S.mw);
+    return {key:k,items:groups[k]||[],patterns:lk.concat(r.patterns),errors:r.errors,weight:+S.groupWeights[k]||10000,wkey:k,mw:S.mw,locked:lk.length>0};
+  });
+  // 직접 배열 코일(탭) — 입력한 순서 그대로 1패턴
+  S.coils.forEach((c,ci)=>{
+    const lanes=[]; (c.lanes||[]).forEach(r=>{const w=+r.w,n=Math.floor(+r.n);if(w>0&&n>0)for(let k=0;k<n;k++)lanes.push({w,extra:false});});
+    if(!lanes.length||!(+c.mw>0)||!c.mat||!(+c.t>0))return;
+    const key=specKey(c.mat,c.t), used=Math.round(lanes.reduce((a,l)=>a+l.w,0)*10)/10, rep=Math.max(1,Math.floor(+c.rep||1)), cap=c.mw-S.trim;
+    lanes.forEach(l=>{if(l.w<S.minslit&&!warn.some(x=>x.includes(`코일 ${ci+1} `)))warn.push(`코일 ${ci+1} ${specLabel(key)}: ${fw(l.w)}mm는 최소 슬릿폭(${S.minslit}mm) 미만`);});
+    const cnt={}; lanes.forEach(l=>cnt[l.w]=(cnt[l.w]||0)+1);
+    const items=Object.keys(cnt).map(w=>({w:+w,qty:cnt[w]*rep}));
+    // 1본에 들어가면 입력한 순서 그대로, 넘치면(폭 합계·슬릿 수) 필요한 본수만큼 자동 분할 배열
+    const fits=used<=cap+1e-6&&lanes.length<=S.lanes;
+    let patterns,errors=[];
+    if(fits)patterns=[{lanes,rep,used,mw:+c.mw}];
+    else{const r=optimizeGroup(items,+c.mw,S.trim,S.lanes,S.fill);r.patterns.forEach(p=>p.mw=+c.mw);patterns=r.patterns;errors=r.errors;}
+    plan.push({key,manual:true,split:!fits,inputW:used,inputN:lanes.length,cid:c.id,label:`코일 ${ci+1}`,mw:+c.mw,wkey:"coil:"+c.id,weight:+S.groupWeights["coil:"+c.id]||10000,
+      items,errors,patterns,need:patterns.reduce((a,p)=>a+p.rep,0)});
+  });
+  plan.warn=warn;
+  syncActive();
+}
+function syncActive(){
+  if(S.tab!=="auto"){const gi=plan.findIndex(g=>g.cid===S.tab);const keep=gi>=0&&active.g===gi&&active.p<plan[gi].patterns.length;active={g:gi,p:keep?active.p:0};return;}
+  if(!plan[active.g]||plan[active.g].manual){const gi=plan.findIndex(g=>!g.manual);active={g:gi,p:0};}
+  if(plan[active.g]&&active.p>=plan[active.g].patterns.length)active.p=0;
+}
+const curCoil=()=>S.tab==="auto"?null:S.coils.find(c=>c.id===S.tab)||null;
+function colorMap(){
+  const ks=[...new Set(plan.flatMap(g=>g.items.map(i=>g.key+"#"+fw(i.w))))].sort();
+  const m={};ks.forEach((k,i)=>m[k]=PALETTE[i%PALETTE.length]);return m;
+}
+const colOf=(cm,spec,w)=>cm[spec+"#"+fw(w)]||"#888";
+
+/* ---------- 코일 그림 ---------- */
+function drawCoil(){
+  const cc=curCoil(),cm=colorMap(),g=plan[active.g],p=g&&g.patterns[active.p];
+  const baseW=p?p.mw:cc?(+cc.mw||S.mw):S.mw, W=p?Math.max(baseW,p.used):baseW, over=p?p.used-(baseW-S.trim):0;
+  const svg=$("#coil");
+  const X0=110,X1=890,Y0=70,Y1=220,RX=34,RY=(Y1-Y0)/2,CY=(Y0+Y1)/2,sx=(X1-X0)/W;
+  let h=`<defs>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".35" stop-color="#fff" stop-opacity=".08"/><stop offset=".7" stop-color="#000" stop-opacity=".08"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></linearGradient>
+    <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="var(--bad-soft)"/><line x1="0" y1="0" x2="0" y2="8" stroke="var(--bad)" stroke-width="2" opacity=".5"/></pattern>
+    <pattern id="xtra" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="#fff" stroke-width="2" opacity=".45"/></pattern></defs>`;
+  const band=(xa,xb,fill)=>`<path d="M${xa},${Y0} A${RX},${RY} 0 0 1 ${xa},${Y1} L${xb},${Y1} A${RX},${RY} 0 0 0 ${xb},${Y0} Z" fill="${fill}"/>`;
+  h+=band(X0,X1,"var(--steel1)");
+  const labels=[];
+  if(p){
+    const trimTot=W-p.used,tl2=trimTot/2; let x=X0+tl2*sx;
+    h+=band(X0,x,"url(#hatch)");
+    p.lanes.forEach(ln=>{const xb=x+ln.w*sx,col=colOf(cm,g.key,ln.w);h+=band(x,xb,col);if(ln.extra)h+=band(x,xb,"url(#xtra)");
+      h+=`<path d="M${xb},${Y0} A${RX},${RY} 0 0 1 ${xb},${Y1}" fill="none" stroke="#fff" stroke-width="1.5"/>`;labels.push({xa:x,xb,w:ln.w,extra:ln.extra,li:labels.length});x=xb;});
+    h+=band(x,X1,"url(#hatch)");
+    labels.unshift({xa:X0,xb:X0+tl2*sx,w:tl2,trim:true}); labels.push({xa:x,xb:X1,w:tl2,trim:true});
+  }
+  h+=band(X0,X1,"url(#shade)");
+  h+=`<path d="M${X1},${Y0} A${RX},${RY} 0 0 1 ${X1},${Y1}" fill="none" stroke="var(--steel3)" stroke-width="1.5"/>`;
+  h+=`<line x1="${X0}" y1="${Y0}" x2="${X1}" y2="${Y0}" stroke="var(--steel3)" stroke-width="1.5"/><line x1="${X0}" y1="${Y1}" x2="${X1}" y2="${Y1}" stroke="var(--steel3)" stroke-width="1.5"/>`;
+  h+=`<ellipse cx="${X0}" cy="${CY}" rx="${RX}" ry="${RY}" fill="var(--steel2)" stroke="var(--steel3)" stroke-width="1.5"/>`;
+  for(let k=1;k<=5;k++){const f=1-k*0.11;h+=`<ellipse cx="${X0}" cy="${CY}" rx="${RX*f}" ry="${RY*f}" fill="none" stroke="var(--steel1)" stroke-width=".8" opacity=".7"/>`;}
+  h+=`<ellipse cx="${X0}" cy="${CY}" rx="${RX*.36}" ry="${RY*.36}" fill="var(--bg)" stroke="var(--steel3)" stroke-width="1.2"/>`;
+  h+=`<text x="${X0}" y="${Y1+22}" text-anchor="middle" font-size="11" fill="var(--muted)">ID ${esc(S.header.id)}</text>`;
+  h+=`<line x1="${X0}" y1="${Y0-30}" x2="${X1}" y2="${Y0-30}" stroke="var(--ink)" stroke-width="1"/>`;
+  h+=`<line x1="${X0}" y1="${Y0-38}" x2="${X0}" y2="${Y0-4}" stroke="var(--muted)" stroke-dasharray="3 3"/><line x1="${X1}" y1="${Y0-38}" x2="${X1}" y2="${Y0-4}" stroke="var(--muted)" stroke-dasharray="3 3"/>`;
+  const specTxt=(g?specLabel(g.key):cc?(cc.mat&&+cc.t?specLabel(specKey(cc.mat,cc.t)):""):(S.mat&&S.t?specLabel(specKey(S.mat,S.t)):""));
+  h+=`<rect x="${(X0+X1)/2-110}" y="${Y0-44}" width="220" height="26" rx="5" fill="var(--panel)" stroke="${over>1e-6?"var(--bad)":"var(--line)"}"/>`;
+  h+=`<text x="${(X0+X1)/2}" y="${Y0-26}" text-anchor="middle" font-size="15" font-weight="700" fill="var(--ink)">${esc(specTxt)} × ${fw(baseW)} mm</text>`;
+  labels.forEach(l=>{
+    const cx=(l.xa+l.xb)/2+RX,pw=l.xb-l.xa;   // 소폭 경계가 오른쪽으로 RX만큼 휘어 보이므로, 가운데 높이에서 보이는 면의 정중앙 = 중간점 + RX
+    if(l.trim){if(l.w>0&&pw>=18)h+=`<text x="${(l.xa+l.xb)/2}" y="${Y1+40}" text-anchor="middle" font-size="10" fill="var(--bad)">트림</text>`;return;}
+    const txt=fw(l.w);
+    // 숫자는 가로로 표시: 띠 폭에 맞춰 글자 크기를 14→8까지 줄이고, 그래도 안 들어갈 만큼 좁을 때만 세로로 돌림
+    const tw=fs=>String(txt).replace(/[.,]/g,"").length*fs*0.62+String(txt).replace(/[^.,]/g,"").length*fs*0.3;
+    let fs=pw>60?14:12; while(fs>8&&tw(fs)>pw-4)fs--;
+    if(tw(fs)<=pw-2)h+=`<text x="${cx}" y="${CY+fs*0.36}" text-anchor="middle" font-size="${fs}" font-weight="700" fill="#fff" style="paint-order:stroke" stroke="rgba(0,0,0,.35)" stroke-width="2">${txt}</text>`;
+    else h+=`<text transform="translate(${cx},${CY}) rotate(-90)" text-anchor="middle" dy="4" font-size="10" font-weight="700" fill="#fff" style="paint-order:stroke" stroke="rgba(0,0,0,.35)" stroke-width="2">${txt}</text>`;
+    if(l.extra&&pw>=26)h+=`<text x="${cx}" y="${CY+22}" text-anchor="middle" font-size="9" fill="#fff">보충</text>`;
+  });
+  if(p){
+    const yy=Y1+30;
+    h+=`<line x1="${X0}" y1="${yy}" x2="${X1}" y2="${yy}" stroke="var(--muted)"/>`;
+    labels.forEach(l=>{h+=`<line x1="${l.xa}" y1="${yy-5}" x2="${l.xa}" y2="${yy+5}" stroke="var(--muted)"/>`;});
+    h+=`<line x1="${X1}" y1="${yy-5}" x2="${X1}" y2="${yy+5}" stroke="var(--muted)"/>`;
+    const trimTot=baseW-p.used;
+    h+=over>1e-6
+      ?`<text x="${X0}" y="${yy+42}" font-size="13" fill="var(--bad)" font-weight="700">⚠ 폭 합계 ${fw(p.used)}mm — 유효폭(${fw(baseW-S.trim)}mm)을 ${fw(over)}mm 초과합니다. 폭이나 열 수를 줄이세요.</text>`
+      :`<text x="${X0}" y="${yy+42}" font-size="13" fill="var(--ink)">패턴: <tspan font-weight="700">${esc(patternText(p))}</tspan>  ·  사용폭 ${fw(p.used)}mm  ·  트림 ${fw(trimTot)}mm  ·  수율 ${(p.used/baseW*100).toFixed(1)}%  ·  ×${fmt(p.rep)}본</text>`;
+    const autoN=plan.filter(x=>!x.manual).length, ai=plan.filter(x=>!x.manual).indexOf(g);
+    $("#coilTitle").textContent=g.manual?(g.split?`${g.label} · 코일 ${fmt(g.need)}본 필요(자동 분할) · 패턴 ${active.p+1}/${g.patterns.length} · ${specLabel(g.key)}`:`${g.label} · 직접 배열 · ${specLabel(g.key)}`):`자동 조합 · ${specLabel(g.key)} · 패턴 ${active.p+1}/${g.patterns.length}`+(autoN>1?` · 규격 ${ai+1}/${autoN}`:"");
+  }else{
+    h+=`<text x="${(X0+X1)/2}" y="${CY+5}" text-anchor="middle" font-size="14" fill="var(--steel3)">${cc?"오른쪽 편집 창에 폭과 열 수를 입력하세요":"오른쪽에 폭·수량을 입력하거나 재고 리스트에서 폭을 선택하세요"}</text>`;
+    $("#coilTitle").textContent=cc?`코일 ${S.coils.indexOf(cc)+1} · 직접 배열`:"";
+  }
+  // 소폭 선택·삭제: 각 소폭 위에 투명한 클릭 영역, 선택한 소폭은 테두리 + ✕ 버튼
+  if(p){
+    if(selLane&&!(selLane.g===active.g&&selLane.p===active.p&&selLane.ii.length&&selLane.ii.every(i=>i<p.lanes.length)))selLane=null;
+    labels.forEach(l=>{if(l.trim)return;
+      h+=`<path class="lh" data-li="${l.li}" d="M${l.xa},${Y0} A${RX},${RY} 0 0 1 ${l.xa},${Y1} L${l.xb},${Y1} A${RX},${RY} 0 0 0 ${l.xb},${Y0} Z"><title>${fw(l.w)}mm${l.extra?" (재고보충)":""} · 클릭하여 선택</title></path>`;});
+    let selTxt="";
+    if(selLane){
+      const sl=selLane.ii.map(i=>labels.find(x=>!x.trim&&x.li===i)).filter(Boolean);
+      sl.forEach(l=>{h+=`<path d="M${l.xa},${Y0} A${RX},${RY} 0 0 1 ${l.xa},${Y1} L${l.xb},${Y1} A${RX},${RY} 0 0 0 ${l.xb},${Y0} Z" fill="rgba(255,255,255,.22)" stroke="#facc15" stroke-width="3" pointer-events="none"/>`;});
+      const l=sl[sl.length-1];   // ✕ 버튼은 마지막으로 선택한 소폭 위에 하나만
+      if(l){
+        const bx=(l.xa+l.xb)/2+RX*0.55, by=Y0+16, n=sl.length;
+        h+=`<g class="ldel" data-ldel="1"><title>선택한 소폭 ${n}개 삭제 (Delete 키)</title><circle cx="${bx}" cy="${by}" r="11" fill="var(--bad)" stroke="#fff" stroke-width="1.5"/><text x="${bx}" y="${by+4.5}" text-anchor="middle" font-size="13" font-weight="700" fill="#fff" pointer-events="none">✕</text></g>`;
+        if(n>1)h+=`<g pointer-events="none"><circle cx="${bx+12}" cy="${by-10}" r="8" fill="#facc15" stroke="#fff"/><text x="${bx+12}" y="${by-6.5}" text-anchor="middle" font-size="10" font-weight="700" fill="#1d2330">${n}</text></g>`;
+      }
+      selTxt=`선택 ${sl.length}개: ${esc(patternText({lanes:sl.map(x=>({w:x.w,extra:false}))}))} — ✕ 또는 Delete 키로 함께 삭제, 다시 클릭하면 선택 취소, 빈 곳 클릭 시 모두 해제`;
+    }
+    h+=`<text x="${X1}" y="${Y1+102}" text-anchor="end" font-size="11" fill="var(--muted)">${selTxt||"소폭을 클릭하면 선택됩니다(여러 개 선택 가능). 선택 후 ✕ 또는 Delete 키로 삭제"}</text>`;
+  }else selLane=null;
+  svg.innerHTML=h;
+}
+function patternText(p){const m=new Map();p.lanes.forEach(l=>{const k=fw(l.w)+(l.extra?"(보충)":"");m.set(k,(m.get(k)||0)+1);});return [...m].map(([k,c])=>k+"×"+c).join(" + ");}
+
+/* ---------- 우측 직접 입력 ---------- */
+function renderManual(focusIdx){
+  $("#manualSpec").textContent=S.mat&&S.t>0?`규격: ${normMat(S.mat)} ${tl(S.t)}t · 코일 ${fw(S.mw)}mm`:"⚠ 위에서 재질·두께를 먼저 입력하세요";
+  $("#mrows").innerHTML=S.manualRows.map((r,i)=>`<div class="mrow" data-i="${i}"><span class="i">${i+1}</span>
+    <input type="number" data-m="w" min="1" step="0.5" value="${esc(r.w)}" placeholder="폭">
+    <input type="number" data-m="q" min="0" step="1" value="${esc(r.q)}" placeholder="본">
+    <button class="sm" data-m="del" title="줄 삭제">✕</button></div>`).join("");
+  updManualSum();
+  if(focusIdx!=null){const el=$(`#mrows .mrow[data-i="${focusIdx}"] input[data-m="w"]`);if(el)el.focus();}
+}
+function updManualSum(){
+  let sw=0,n=0;S.manualRows.forEach(r=>{if(+r.w>0){sw+=+r.w;n++;}});
+  const cap=S.mw-S.trim;
+  $("#msumW").innerHTML=`1본 기준 폭 합 <b>${fw(sw)}</b> / ${fw(cap)}mm`;
+  $("#msumL").innerHTML=sw>cap?`<span style="color:var(--bad)">초과 → 자동분할</span>`:`잔폭 ${fw(cap-sw)}mm`;
+}
+
+/* ---------- 코일 탭 (자동 조합 / 코일 N 직접 배열) ---------- */
+function renderTabs(){
+  const autoCoils=plan.filter(g=>!g.manual).reduce((a,g)=>a+g.patterns.reduce((b,p)=>b+p.rep,0),0);
+  let h=`<button role="tab" data-tab="auto" class="${S.tab==="auto"?"on":""}">자동 조합${autoCoils?`<small>${fmt(autoCoils)}본</small>`:""}</button>`;
+  S.coils.forEach((c,i)=>{
+    const g=plan.find(x=>x.cid===c.id), bad=g&&g.errors.length;
+    h+=`<button role="tab" data-tab="${c.id}" class="${S.tab===c.id?"on":""}">코일 ${i+1}${g?`<small class="${bad?"err":""}">${bad?"⚠ ":""}${fmt(g.need)}본${g.split?" (분할)":""}</small>`:`<small>비어 있음</small>`}</button>`;
+  });
+  h+=`<button class="add" data-tab="+" title="원판 1장을 직접 배열합니다">＋ 코일 추가</button>`;
+  $("#tabs").innerHTML=h;
+}
+function setTab(t){
+  S.tab=t; syncActive(); renderTabs(); renderSide(); drawCoil(); renderResult(); save();
+}
+function renderResultActive(){
+  document.querySelectorAll("#result .pat").forEach(x=>x.classList.toggle("on",+x.dataset.g===active.g&&+x.dataset.p===active.p));
+  // '남은 폭 활용' 표는 선택한 패턴(코일) 것만 보이고 나머지는 숨김
+  const boxes=[...document.querySelectorAll("#result .fillbox")];
+  boxes.forEach(x=>{
+    const on=+x.dataset.fg===active.g&&+x.dataset.fp===active.p;
+    x.classList.toggle("on",on); x.classList.remove("dim"); x.hidden=!on;
+  });
+}
+function matOptions(sel){return GRADES.map(([k,d,s])=>`<option value="${k}"${k===sel?" selected":""}>${k}${d?" ("+d+")":""}</option>`).join("");}
+function renderSide(focus){
+  const cc=curCoil();
+  $("#autoPanel").hidden=!!cc; $("#coilPanel").hidden=!cc;
+  if(cc)renderCoilEditor(focus);
+}
+function renderCoilEditor(focus){
+  const c=curCoil(); if(!c)return; const ci=S.coils.indexOf(c);
+  if(!c.lanes||!c.lanes.length)c.lanes=[{w:"",n:""}];
+  $("#coilPanel").innerHTML=`<div class="ce-h"><h3>코일 ${ci+1} 직접 배열</h3><button class="sm del" data-cdel title="이 코일 삭제">🗑 삭제</button></div>
+    <div class="ce-spec">
+      <label>강종<select data-c="mat">${matOptions(c.mat)}</select></label>
+      <label>두께 (mm)<input data-c="t" type="number" step="0.05" min="0.1" value="${esc(c.t)}"></label>
+      <label>코일 폭 (mm)<input data-c="mw" type="number" min="100" max="2600" step="1" value="${esc(c.mw)}"></label>
+      <label>본수<input data-c="rep" type="number" min="1" step="1" value="${esc(c.rep)}"></label>
+    </div>
+    <div class="mhead"><span></span><span>폭 (mm)</span><span>열 수</span><span></span></div>
+    <div id="clanes">${c.lanes.map((r,i)=>`<div class="mrow" data-li="${i}"><span class="i">${i+1}</span>
+      <input type="number" data-l="w" min="1" step="0.5" value="${esc(r.w)}" placeholder="폭">
+      <input type="number" data-l="n" min="0" step="1" value="${esc(r.n)}" placeholder="열">
+      <button class="sm" data-l="del" title="줄 삭제">✕</button></div>`).join("")}</div>
+    <button class="sm" data-cadd style="width:100%">＋ 폭 추가</button>
+    <div class="msum"><span id="csumW"></span><span id="csumL"></span></div>
+    <div class="muted" style="font-size:11.5px;margin-top:6px">원판 1장에 넣을 폭과 열 수를 입력한 순서대로 배열합니다. 본수는 이 배열로 발주할 원판 수입니다.</div>`;
+  updCoilSum();
+  if(focus!=null){const el=$(`#clanes .mrow[data-li="${focus}"] input[data-l="w"]`);if(el)el.focus();}
+}
+function updCoilSum(){
+  const c=curCoil(); if(!c||!$("#csumW"))return;
+  let sw=0,nl=0; c.lanes.forEach(r=>{const w=+r.w,n=Math.floor(+r.n);if(w>0&&n>0){sw+=w*n;nl+=n;}});
+  const cap=(+c.mw||0)-S.trim;
+  $("#csumW").innerHTML=`폭 합 <b>${fw(sw)}</b> / ${fw(cap)}mm · ${nl}열`;
+  const g=plan.find(x=>x.cid===c.id);
+  $("#csumL").innerHTML=(sw>cap+1e-6||nl>S.lanes)?`<span class="split">코일 ${g?g.need:"?"}본 필요 (자동 분할)</span>`:`잔폭 ${fw(cap-sw)}mm`;
+}
+function addCoil(){
+  const c={id:"c"+Date.now().toString(36),mat:S.mat||"EGI",t:S.t||1,mw:S.mw,rep:1,lanes:[{w:"",n:""}]};
+  S.coils.push(c); setTab(c.id); renderCoilEditor(0);
+}
+
+/* ---------- 재고 리스트 ---------- */
+function slitKg(w){const k=specKey(S.mat,S.t);return (+S.groupWeights[k]||10000)*w/S.mw;}
+function coverOf(it){const a=it.ps&&it.ps.avgM;if(!(a>0)||it.stockKg==null)return null;return it.stockKg/a;}
+function defaultQty(it){
+  const a=(it.ps&&it.ps.avgM)||0, need=Math.max(0,a*(+S.target||2)-(it.stockKg||0));
+  const sk=(+S.groupWeights[normMat(it.mat)+"|"+t2(it.t)]||10000)*it.w/S.mw;
+  return Math.max(1,Math.ceil(need/sk));
+}
+/* 검색어 → 조건 목록. 띄어쓴 낱말은 모두 만족해야 함(AND)
+   300 → 폭이 300으로 시작 · 두께 1.6과 같으면 두께 일치 / 1.6x300 → 두께×폭 / 200~400, 200-400 → 폭 범위 / EGI → 강종 */
+let Q="";
+function searchTokens(){
+  const s=Q.trim().toUpperCase().replace(/[×*＊]/g,"X"); if(!s)return [];
+  return s.split(/[\s,]+/).filter(Boolean).map(tok=>{
+    let m=tok.match(/^(\d+(?:\.\d+)?)[~\-](\d+(?:\.\d+)?)$/);
+    if(m){const lo=Math.min(+m[1],+m[2]),hi=Math.max(+m[1],+m[2]);return it=>it.w>=lo&&it.w<=hi;}
+    m=tok.match(/^(\d+(?:\.\d+)?)T?X(\d+(?:\.\d+)?)$/);
+    if(m)return it=>Math.abs(it.t-+m[1])<1e-6&&fw(it.w).startsWith(m[2]);
+    m=tok.match(/^(\d+(?:\.\d+)?)T$/);
+    if(m)return it=>Math.abs(it.t-+m[1])<1e-6;
+    if(/^\d+(?:\.\d+)?$/.test(tok))return it=>fw(it.w).startsWith(tok)||tl(it.t)===String(+tok);
+    return it=>String(it.mat).toUpperCase().includes(tok);
+  });
+}
+function visibleItems(){
+  if(!IDX)return [];
+  let a=[...IDX.items.values()];
+  if(!S.showAll&&S.mat&&S.t>0){const sk=specKey(S.mat,S.t);a=a.filter(it=>specKey(it.mat,it.t)===sk);}
+  const qs=searchTokens(); if(qs.length)a=a.filter(it=>qs.every(f=>f(it)));
+  const base=(x,y)=>specKey(x.mat,x.t).localeCompare(specKey(y.mat,y.t))||y.w-x.w;
+  const so=S.sort; if(!so||!so.k)return a.sort(base);
+  const tgt=+S.target||2;
+  const val=it=>{switch(so.k){
+    case "mat":return it.mat; case "t":return it.t; case "w":return it.w;
+    case "stock":return it.stockKg; case "avg":return it.ps&&it.ps.avgM?it.ps.avgM:null;
+    case "cover":return coverOf(it); case "cycle":return it.ps&&it.ps.cycle?it.ps.cycle.days:null;
+    case "status":{const c=coverOf(it);return c==null?null:c<1?0:c<tgt?1:2;}
+    case "qty":return +S.sel[it.k]>0?+S.sel[it.k]:null;}};
+  return a.sort((x,y)=>{
+    const vx=val(x),vy=val(y);
+    if(vx==null&&vy==null)return base(x,y); if(vx==null)return 1; if(vy==null)return -1;   // 빈 값은 항상 아래
+    const c=typeof vx==="string"?vx.localeCompare(vy,"ko"):vx-vy;
+    return c*so.d||base(x,y);
+  });
+}
+function renderSortHead(){
+  document.querySelectorAll("#invHead th[data-sort]").forEach(th=>{
+    const on=S.sort&&S.sort.k===th.dataset.sort; th.classList.toggle("asc",on&&S.sort.d===1); th.classList.toggle("desc",on&&S.sort.d===-1);
+    th.title=on?(S.sort.d===1?"오름차순 · 클릭하면 내림차순":"내림차순 · 클릭하면 정렬 해제"):"클릭하여 정렬";
+  });
+}
+let openKey=null;
+function renderInv(){
+  $("#listSpec").textContent=S.showAll?"전체 강종":(S.mat&&S.t>0?`${normMat(S.mat)} ${tl(S.t)}t`:"재질·두께 미입력");
+  renderSortHead();
+  const cm=colorMap(), rows=visibleItems();
+  $("#qCnt").textContent=Q.trim()?`${rows.length}건`:"";
+  if(!rows.length&&Q.trim()){
+    $("#inv").innerHTML=`<tr><td colspan="10"><div class="empty">‘${esc(Q.trim())}’ 검색 결과가 없습니다.${S.showAll?"":" 다른 강종·두께까지 찾으려면 ‘전체 강종·두께’를 켜세요."}</div></td></tr>`;
+    return;
+  }
+  if(!rows.length){
+    const none=!(L.pur.length||L.invYm);
+    $("#inv").innerHTML=`<tr><td colspan="10"><div class="empty">${none?
+      "연동된 매입/재고 데이터가 없습니다. 같은 브라우저에서 <b>매입분석도구</b>(와 영업분석도구)를 열어 데이터를 불러온 뒤 상단 <b>↻ 다시 불러오기</b>를 누르거나, <b>엑셀 불러오기</b>로 ERP 매입·매출 파일을 여세요. 아래 ‘직접 추가’로 수동 입력도 가능합니다.":
+      `${esc(normMat(S.mat))} ${esc(tl(S.t))}t 코일의 매입·재고 기록이 없습니다. 재질·두께를 확인하거나 ‘전체 재질·두께 보기’를 켜세요.`}</div></td></tr>`;
+    return;
+  }
+  $("#inv").innerHTML=rows.map(it=>{
+    const sel=+S.sel[it.k]>0, cv=coverOf(it), tgt=+S.target||2;
+    const st=cv==null?`<span class="badge gray">-</span>`:cv<1?`<span class="badge bad">부족</span>`:cv<tgt?`<span class="badge warn">주의</span>`:`<span class="badge ok">여유</span>`;
+    const cyc=it.ps&&it.ps.cycle?`${Math.round(it.ps.cycle.days)}일`:"-";
+    const col=cm[specKey(it.mat,it.t)+"#"+fw(it.w)];
+    return `<tr class="${sel?"sel":""} ${openKey===it.k?"open":""}" data-k="${esc(it.k)}">
+      <td><input type="checkbox" data-f="sel" ${sel?"checked":""} aria-label="주문 선택"></td>
+      <td>${esc(it.mat)}${it.manual?' <span class="badge gray">수동</span>':""}</td><td class="r">${tl(it.t)}</td>
+      <td class="r">${col?`<span class="sw" style="background:${col}"></span>`:""}<b>${fw(it.w)}</b></td>
+      <td class="r">${it.stockKg==null?'<span class="muted">-</span>':fmt(it.stockKg)}</td>
+      <td class="r">${it.ps&&it.ps.avgM?fmt(it.ps.avgM):'<span class="muted">-</span>'}</td>
+      <td class="r">${cv==null?"-":cv.toFixed(1)}</td><td>${cyc}</td><td>${st}</td>
+      <td class="r"><input type="number" data-f="qty" value="${sel?S.sel[it.k]:""}" min="0" ${sel?"":"disabled"} placeholder="-"></td></tr>`;
+  }).join("");
+}
+
+/* ---------- 결과 ---------- */
+function renderResult(){
+  const el=$("#result"),cm=colorMap();
+  const cc=curCoil(), lab=cc?`코일 ${S.coils.indexOf(cc)+1}`:"";
+  $("#resTitle").textContent=cc?`${lab} 배열 결과`:"최적 조합 결과";
+  if(!plan.some(inView)){
+    el.innerHTML=cc?`<p class="muted"><b>${lab}</b>이(가) 비어 있습니다. 위 그림 오른쪽 편집 창에 폭과 열 수를 입력하세요.</p>`
+      :`<p class="muted">오른쪽 위 ‘직접 입력’에 폭·수량을 넣거나, 재고 리스트에서 주문할 폭을 체크하세요. 원판 1장을 직접 배열하려면 그림 위 <b>＋ 코일 추가</b>를 누르세요.</p>`;
+    renderStats();return;
+  }
+  let h="";
+  (plan.warn||[]).filter(w=>cc?w.startsWith(lab+" "):!/^코일 \d+ /.test(w)).forEach(w=>h+=`<div class="alert warn">⚠ ${esc(w)}</div>`);
+  plan.forEach((g,gi)=>{
+    if(!inView(g))return;
+    const tot=g.patterns.reduce((a,p)=>a+p.rep,0),[mat,t]=g.key.split("|"),MW=g.mw;
+    const title=g.manual?`<b>${esc(g.label)}</b><span class="badge gray">${g.split?"자동 분할":"직접 배열"}</span><span class="muted" style="font-size:13px">${esc(specLabel(g.key))} × ${fw(MW)}</span>`:`<b>${esc(specLabel(g.key))}</b><span class="badge gray">자동 조합</span>`;
+    h+=`<div class="group${g.manual?" mgroup":""}"><div class="group-h">${title}<span class="badge ok tot">코일 ${fmt(tot)}본</span>
+      <label class="f" style="flex-direction:row;align-items:center;gap:6px;margin-left:auto">코일 중량(kg)
+      <input type="text" inputmode="numeric" data-gw="${esc(g.wkey)}" value="${fmt(g.weight)}" style="width:96px;text-align:right" title="Alt+↑↓ 키로 100kg씩 조정"></label>
+      <button class="sm" data-undo ${UNDO.length?"":"disabled"} title="${UNDO.length?`되돌리기: ${esc(UNDO[UNDO.length-1].label)} (Ctrl+Z)`:"되돌릴 작업이 없습니다"}">↶ 취소</button>
+      ${g.manual?"":`<button class="sm${g.locked?" pri":""}" data-opt="${esc(g.key)}" title="${g.locked?"손으로 고친 배열을 버리고 주문 수량 전체를 다시 최적 조합합니다":"주문 수량 전체를 다시 최적 조합합니다"}">⟳ 최적화</button>`}
+      <button class="sm del" data-delg="${gi}" title="${esc(g.manual?g.label:specLabel(g.key))} 삭제">🗑 삭제</button></div>${g.locked?`<div class="alert info" style="margin:6px 0">손으로 고친 배열입니다(소폭 삭제·추가). 다시 조합하지 않고 그대로 두며, <b>⟳ 최적화</b>를 누르면 주문 수량 전체를 다시 조합합니다.</div>`:""}`;
+    g.errors.forEach(e=>h+=`<div class="alert bad">${esc(e)}</div>`);
+    g.patterns.forEach((p,pi)=>{
+      const trimTot=Math.max(0,MW-p.used),pct=p.used/MW*100;
+      let bar=`<div class="trim" style="flex:${trimTot/2}"></div>`;
+      p.lanes.forEach(l=>bar+=`<div class="${l.extra?"extra":""}" style="flex:${l.w};background-color:${colOf(cm,g.key,l.w)}" title="${fw(l.w)}mm${l.extra?" (재고보충)":""}">${l.w/MW>0.05?fw(l.w):""}</div>`);
+      bar+=`<div class="trim" style="flex:${trimTot/2}"></div>`;
+      h+=`<div class="pat ${gi===active.g&&pi===active.p?"on":""}" data-g="${gi}" data-p="${pi}"><div class="cnt">×${fmt(p.rep)}본${p.locked?`<small class="lkb" title="손으로 고친 배열 — ‘최적화’를 누르기 전까지 그대로 유지">고정</small>`:""}</div><div class="bar">${bar}</div>
+        <div class="meta">${esc(patternText(p))}<br>트림 ${fw(trimTot)}mm · <span style="color:${pct<97?"var(--warn)":"var(--ok)"}">수율 ${pct.toFixed(1)}%</span></div>
+        <button class="px2" data-delp="${gi}:${pi}" title="이 패턴(×${fmt(p.rep)}본) 삭제" aria-label="패턴 삭제">×</button></div>`;
+    });
+    const prod={},extra={};
+    g.patterns.forEach(p=>p.lanes.forEach(l=>{const o=l.extra?extra:prod;o[l.w]=(o[l.w]||0)+p.rep;}));
+    const dens=density(mat);
+    h+=`<div class="tbl-wrap" style="margin-top:8px"><table><thead><tr><th>폭</th><th class="r">요청</th><th class="r">생산</th><th class="r">보충</th><th class="r">슬릿 1본 중량</th><th class="r">길이(약)</th></tr></thead><tbody>`;
+    const widths=[...new Set(g.items.map(i=>+i.w).concat(Object.keys(extra).map(Number)))].sort((a,b)=>b-a);
+    widths.forEach(w=>{
+      const req=g.items.filter(i=>+i.w===w).reduce((a,i)=>a+(+i.qty||0),0);
+      const sw=g.weight*w/MW,len=g.weight/(Number(t)*MW*dens/1000);
+      h+=`<tr><td><span class="sw" style="background:${colOf(cm,g.key,w)}"></span>${fw(w)}</td><td class="r">${fmt(req)}</td><td class="r">${fmt(prod[w]||0)}</td><td class="r">${extra[w]?fmt(extra[w]):"-"}</td><td class="r">${fmt(sw)} kg</td><td class="r">${fmt(len)} m</td></tr>`;
+    });
+    h+=`</tbody></table></div>`;
+    h+=fillCandidates(g,cm);
+    if(S.header.maxw&&g.weight*Math.max(...widths)/MW>+S.header.maxw)
+      h+=`<div class="alert warn">슬릿코일 중량이 최대중량(${fmt(+S.header.maxw)}kg)을 초과합니다. 코일 중량을 낮추거나 분할(Multi-cut) 요청하세요.</div>`;
+    if(!S.fill&&!g.manual&&g.patterns.some(p=>p.used/MW<0.97))h+=`<div class="alert info">수율 97% 미만 패턴이 있습니다. ‘잔폭을 재고보충 슬릿으로 채우기’를 켜면 남는 폭을 재고용으로 활용할 수 있습니다.</div>`;
+    h+=`</div>`;
+  });
+  el.innerHTML=h; renderResultActive(); renderStats();
+}
+/* 남은 폭(트림 초과분)에 넣을 수 있는 같은 강종·두께 원자재 후보
+   남은 폭 = (코일폭 − 최소 트림) − 사용폭.  넣을 수(열) = min(남은 폭 ÷ 폭, 남은 나이프 수)
+   정렬: 재고 부족 → 주의 → 재고개월 적은 순 → 남은 폭을 많이 채우는 순 */
+function fillCandidates(g,cm){
+  if(!IDX)return "";
+  const tgt=+S.target||2, pool=[...IDX.items.values()].filter(it=>specKey(it.mat,it.t)===g.key&&it.w>=S.minslit);
+  let h="";
+  g.patterns.forEach((p,pi)=>{
+    const left=Math.round(((g.mw-S.trim)-p.used)*10)/10, laneLeft=S.lanes-p.lanes.length;
+    if(laneLeft<=0||left<S.minslit)return;
+    const rows=pool.filter(it=>it.w<=left).map(it=>{
+      const n=Math.min(Math.floor(left/it.w+1e-9),laneLeft), cv=coverOf(it), fillW=n*it.w;
+      const rank=cv==null?3:cv<1?0:cv<tgt?1:2;
+      return {it,n,cv,fillW,rank,after:left-fillW};
+    }).sort((a,b)=>a.rank-b.rank||((a.cv==null?99:a.cv)-(b.cv==null?99:b.cv))||b.fillW-a.fillW);
+    h+=`<div class="fillbox" data-fg="${plan.indexOf(g)}" data-fp="${pi}"><div class="fb-h"><b>남은 폭 활용</b><em class="fb-sel">선택한 패턴</em> <span>패턴 ${pi+1} · 남은 폭 <b>${fw(left)}mm</b> · ×${fmt(p.rep)}본 · 나이프 ${laneLeft}개 여유</span></div>`;
+    if(!rows.length){h+=`<div class="muted" style="font-size:12px;padding:6px 2px">${esc(specLabel(g.key))}에서 ${fw(left)}mm 이하 원자재가 리스트에 없습니다.</div></div>`;return;}
+    h+=`<div class="tbl-wrap"><table class="dt"><thead><tr><th>폭</th><th class="r">넣을 수</th><th class="r">채움 후 트림</th><th class="r">현재고(kg)</th><th class="r">재고개월</th><th>상태</th><th class="r">추가 시 생산</th><th></th></tr></thead><tbody>`;
+    rows.slice(0,12).forEach(r=>{
+      const it=r.it, ordered=+S.sel[it.k]>0, col=cm[g.key+"#"+fw(it.w)];
+      const st=r.cv==null?'<span class="badge gray">-</span>':r.cv<1?'<span class="badge bad">부족</span>':r.cv<tgt?'<span class="badge warn">주의</span>':'<span class="badge ok">여유</span>';
+      h+=`<tr class="fr${openKey===it.k?" open":""}" data-open="${esc(it.k)}" title="클릭하면 상세 정보가 열립니다"><td>${col?`<span class="sw" style="background:${col}"></span>`:""}<b>${fw(it.w)}</b>${ordered?' <span class="badge gray">주문중</span>':""}</td>
+        <td class="r">${r.n}열</td><td class="r">${fw(r.after+S.trim)}mm</td>
+        <td class="r">${it.stockKg==null?"-":fmt(it.stockKg)}</td><td class="r">${r.cv==null?"-":r.cv.toFixed(1)}</td><td>${st}</td>
+        <td class="r">${fmt(r.n*p.rep)}본</td>
+        <td><button class="sm ${r.rank<=1?"pri":""}" data-fill="${esc(it.k)}" data-q="${fmt(r.n*p.rep)}" data-n="${r.n}"${g.manual?` data-cid="${g.cid}"`:""} title="${g.manual?`${g.label}에 ${fw(it.w)}×${r.n}열 추가`:"주문에 추가"}">＋ 추가</button></td></tr>`;
+    });
+    h+=`</tbody></table></div>${rows.length>12?`<div class="muted" style="font-size:11.5px;margin-top:4px">외 ${rows.length-12}개 폭은 재고 리스트에서 확인하세요.</div>`:""}</div>`;
+  });
+  return h;
+}
+/* 이번에 구입하는 원자재(선택한 탭)로 만들 수 있는 제품 수량
+   폭별 구입량(kg) = 슬릿 본수 × (코일 중량 × 폭 ÷ 코일폭)
+   EA당 소재(kg)  = 정밀: 두께×폭×길이×비중÷1e6 (매출 비고의 [길이]) / 추정: 제품 단가×재료비율÷원자재 kg단가
+   제품별 배분    = 최근 12개월 판매수량 비율 (판매가 없으면 균등)
+   생산 가능 EA   = 배분 kg × 수율 ÷ EA당 소재            ※ 재료비율·수율은 영업분석 설정값 */
+function rawPrice(k){
+  if(IDX.invPrice&&IDX.invPrice.get(k))return IDX.invPrice.get(k);
+  const a=IDX.purByKey.get(k)||[]; const q=a.reduce((s,r)=>s+r.qty,0), m=a.reduce((s,r)=>s+r.amt,0);
+  return q>0?m/q:0;
+}
+function prodPlan(){
+  const out={raws:[],totalEA:0,prodN:0,monthQty:0,noLink:!L.invYm,ratio:L.ratio,yld:L.yld};
+  if(!IDX)return out;
+  const seen=new Set();
+  plan.filter(inView).forEach(g=>{
+    const [mat,t]=g.key.split("|"), cnt={};
+    g.patterns.forEach(p=>p.lanes.forEach(l=>{cnt[l.w]=(cnt[l.w]||0)+p.rep;}));
+    Object.keys(cnt).map(Number).sort((a,b)=>b-a).forEach(w=>{
+      const k=itemKey(mat,+t,w), kg=cnt[w]*g.weight*w/g.mw, price=rawPrice(k), dens=density(mat);
+      const prods=productsFor({mat,t:+t,w}).map(p=>{
+        const s=p.sales, Lm=s.lenQty?s.lenSum/s.lenQty:0;
+        let wEA=0,method="";
+        if(Lm>0){wEA=(+t)*w*Lm*dens/1e6;method="정밀";}
+        else if(p.cost>0&&price>0){wEA=p.cost*(L.ratio/100)/price;method="추정";}
+        return Object.assign(p,{wEA,method,len:Lm});
+      });
+      const usable=prods.filter(p=>p.wEA>0), tq=usable.reduce((a,p)=>a+p.sales.qty,0);
+      usable.forEach(p=>{
+        p.share=tq>0?p.sales.qty/tq:1/usable.length;
+        p.ea=kg*p.share*(L.yld/100)/p.wEA;
+        p.mQty=p.sales.qty/12; p.months=p.mQty>0?p.ea/p.mQty:null;
+        out.totalEA+=p.ea; out.monthQty+=p.mQty;
+        if(!seen.has(p.code)){seen.add(p.code);out.prodN++;}
+      });
+      prods.sort((a,b)=>(b.ea||0)-(a.ea||0));
+      out.raws.push({mat,t:+t,w,k,kg,slits:cnt[w],price,prods,usable:usable.length});
+    });
+  });
+  out.months=out.monthQty>0?out.totalEA/out.monthQty:null;
+  return out;
+}
+let PP=null, DMODE="raw";
+function openProdDetail(){
+  PP=prodPlan(); DMODE="prod"; openKey=null;
+  document.querySelectorAll("#inv tr.open,#result tr.open").forEach(tr=>tr.classList.remove("open"));
+  const cc=curCoil(), lab=cc?`코일 ${S.coils.indexOf(cc)+1}`:"자동 조합";
+  $("#dTitle").textContent=`생산 가능 제품 · ${lab}`; $("#dBadge").innerHTML=""; $("#dToggle").hidden=true;
+  let h="";
+  const tKg=PP.raws.reduce((a,r)=>a+r.kg,0);
+  h+=`<table class="dt sum"><tr><th>원자재 구입</th><th class="r">사용 제품</th><th class="r">생산 가능</th><th class="r">월 판매량</th><th class="r">판매 기준</th></tr>
+    <tr><td><b>${fmt(tKg)}</b> kg</td><td class="r"><b>${PP.prodN}</b>개</td><td class="r"><b>${fmt(PP.totalEA)}</b> EA</td><td class="r">${fmt(PP.monthQty)} EA</td><td class="r"><b>${PP.months==null?"-":PP.months.toFixed(1)+"개월분"}</b></td></tr></table>`;
+  h+=`<div class="muted" style="font-size:11.5px;margin:-4px 0 6px">수율 ${PP.yld}% · 재료비율 ${PP.ratio}% (영업분석 설정) · <b>정밀</b>=두께×폭×길이(매출 비고 [길이]) · <b>추정</b>=제품단가×재료비율÷원자재 kg단가 · 여러 제품이 같은 원자재를 쓰면 최근 12개월 판매수량 비율로 배분</div>`;
+  if(PP.noLink)h+=`<div class="empty">영업분석도구의 <b>월재고현황(자재품목)</b>이 연동되지 않아 원자재를 쓰는 제품을 찾을 수 없습니다. 영업분석도구에서 월재고 파일을 불러온 뒤 상단 ‘다시 불러오기’를 누르세요.</div>`;
+  else if(!PP.raws.length)h+=`<div class="empty">이 탭에 구입할 원자재가 없습니다.</div>`;
+  let ri=0;
+  PP.raws.forEach(r=>{
+    h+=`<h4>${esc(r.mat)} ${tl(r.t)}t × ${fw(r.w)}mm <span class="muted" style="font-weight:400;font-size:12px">· 슬릿 ${fmt(r.slits)}본 · ${fmt(r.kg)}kg${r.price?` · ${fmt(r.price)}원/kg`:""}</span></h4>`;
+    if(!r.prods.length){h+=`<div class="empty">재고표에서 이 원자재(${tl(r.t)}x${fw(r.w)})를 자재품목으로 쓰는 제품이 없습니다.</div>`;return;}
+    h+=`<table class="dt"><thead><tr><th>제품</th><th class="r">EA당 소재</th><th class="r">배분</th><th class="r">생산 가능</th><th class="r">월 판매</th><th class="r">개월분</th></tr></thead><tbody>`;
+    r.prods.forEach(p=>{
+      const i=ri++, nc=p.sales.custList.length;
+      h+=`<tr class="pr${nc?" xp":""}" data-pi="${i}"><td class="nm"><span class="car">${nc?"▸":""}</span><div><b>${esc(p.name)}</b><small>${esc(p.code)}${p.spec?" · "+esc(p.spec):""}${p.len?` · 길이 ${fmt(p.len)}mm`:""}</small></div></td>
+        <td class="r">${p.wEA>0?`${fmt(p.wEA,p.wEA<1?3:2)}kg<small class="mth ${p.method==="정밀"?"ok":""}">${p.method}</small>`:'<span class="muted">계산 불가</span>'}</td>
+        <td class="r">${p.share!=null?Math.round(p.share*100)+"%":"-"}</td>
+        <td class="r"><b>${p.ea!=null?fmt(p.ea):"-"}</b></td>
+        <td class="r">${p.mQty!=null?fmt(p.mQty,p.mQty<10?1:0):fmt(p.sales.qty/12)}</td>
+        <td class="r">${p.months==null?"-":`<span class="${p.months<1?"bad":p.months<3?"warn":"ok"}t">${p.months.toFixed(1)}</span>`}</td></tr>`;
+      if(nc)h+=`<tr class="sub" data-sub="${i}" hidden><td colspan="6"><table class="dt mini"><thead><tr><th>매출처 (최근 12개월)</th><th class="r">수량</th><th class="r">매출</th><th class="r">비중</th></tr></thead><tbody>${
+        p.sales.custList.slice(0,10).map(c=>`<tr><td>${esc(c.cust)}</td><td class="r">${fmt(c.qty)}</td><td class="r">${won(c.amt)}</td><td class="r">${p.sales.amt?(c.amt/p.sales.amt*100).toFixed(0):0}%</td></tr>`).join("")}${nc>10?`<tr class="muted"><td colspan="4">외 ${nc-10}곳</td></tr>`:""}</tbody></table></td></tr>`;
+    });
+    h+=`</tbody></table>`;
+    if(r.usable<r.prods.length)h+=`<div class="muted" style="font-size:11.5px;margin-top:4px">‘계산 불가’ 제품은 매출 비고에 [길이]가 없고 재고표 단가도 없어 EA당 소재중량을 구할 수 없습니다.</div>`;
+  });
+  $("#dBody").innerHTML=h; $("#dBody").scrollTop=0;
+  $("#drawer").classList.add("on"); $("#scrim").classList.add("on"); $("#drawer").setAttribute("aria-hidden","false");
+}
+
+/* 선택한 탭에 속한 조합만: 자동 조합 탭 = 자동 조합 묶음, 코일 N 탭 = 그 코일 */
+const inView=g=>S.tab==="auto"?!g.manual:g.cid===S.tab;
+function renderStats(){
+  const sum=gs=>{let coils=0,wt=0,used=0,total=0,slits=0;gs.forEach(g=>g.patterns.forEach(p=>{coils+=p.rep;wt+=p.rep*g.weight;used+=p.used*p.rep;total+=p.mw*p.rep;slits+=p.lanes.length*p.rep;}));return {coils,wt,used,total,slits};};
+  const v=sum(plan.filter(inView)), a=sum(plan), cc=curCoil(), lab=cc?`코일 ${S.coils.indexOf(cc)+1}`:"자동 조합";
+  const cards=[[`${lab} 코일 발주`,fmt(v.coils)+" 본"],["발주중량",fmt(v.wt/1000,2)+" ton"],["슬릿코일 생산",fmt(v.slits)+" 본"],
+    ["평균 수율",v.total?(v.used/v.total*100).toFixed(1)+" %":"-"],["예상 트림 스크랩",fmt(v.total?v.wt*(1-v.used/v.total):0)+" kg"]];
+  let h=cards.map(([k,x])=>`<div class="stat"><div class="k">${k}</div><div class="v">${x}</div></div>`).join("");
+  // 생산 가능 제품 카드 (클릭 → 오른쪽 상세)
+  const pp=prodPlan();
+  h+=`<button type="button" class="stat prodc" id="prodCard" title="클릭하면 제품별 상세가 열립니다"><div class="k">생산 가능 제품 <span>자세히 ›</span></div>
+    <div class="v">${v.coils&&pp.totalEA?fmt(pp.totalEA)+" EA":"-"}</div>
+    <div class="s">${v.coils?(pp.noLink?"월재고 연동 필요":`${fmt(pp.prodN)}개 제품${pp.months!=null?` · 약 ${pp.months.toFixed(1)}개월분`:""}`):"구입 원자재 없음"}</div></button>`;
+  if(a.coils!==v.coils)h+=`<div class="stat all"><div class="k">전체 발주 (모든 탭)</div><div class="v">${fmt(a.coils)} 본 · ${fmt(a.wt/1000,2)} t</div></div>`;
+  $("#stats").innerHTML=h;
+  if(DMODE==="prod"&&$("#drawer").classList.contains("on"))openProdDetail();
+}
+
+/* ---------- 매입처 선택 ---------- */
+let SUP={groups:[]};
+function renderSupplier(){
+  if(!IDX)return;
+  const specs=new Set(plan.map(g=>g.key)); if(S.mat&&S.t>0)specs.add(specKey(S.mat,S.t));
+  const rel=new Map();
+  IDX.items.forEach(it=>{if(!specs.has(specKey(it.mat,it.t)))return;(it.ps.vendors||[]).forEach(v=>{const x=rel.get(v.vendor)||{amt:0,qty:0,last:""};x.amt+=v.amt;x.qty+=v.qty;if(v.last>x.last)x.last=v.last;rel.set(v.vendor,x);});});
+  const relA=[...rel].sort((a,b)=>b[1].amt-a[1].amt);
+  const coilV=new Map(); IDX.purByKey.forEach(arr=>arr.forEach(r=>{coilV.set(r.vendor,(coilV.get(r.vendor)||0)+r.amt);}));
+  const others=[...coilV].filter(([v])=>!rel.has(v)).sort((a,b)=>b[1]-a[1]);
+  const rest=[...IDX.vendors].filter(([v])=>!rel.has(v)&&!coilV.has(v)).sort((a,b)=>b[1].amt-a[1].amt);
+  const cur=S.header.supplier;
+  SUP={groups:[
+    {t:"이 규격 매입처 (매입액 순)",o:relA.map(([v,x])=>({v,info:`${won(x.amt)} · 최근 ${x.last}`}))},
+    {t:"기타 원자재(코일) 매입처",o:others.map(([v,a])=>({v,info:won(a)}))},
+    {t:"전체 매입처 (원자재 외)",o:rest.map(([v,x])=>({v,info:won(x.amt)}))}
+  ].filter(g=>g.o.length)};
+  const si=$("#supIn"); if(document.activeElement!==si)si.value=cur||"";
+  if(!$("#supList").hidden)drawSupList(si.value);
+  const x=rel.get(cur);
+  $("#supInfo").innerHTML=x?`${esc(cur)}: 선택 규격 누적 매입 ${fmt(x.qty)}kg · ${won(x.amt)}원 · 최근 매입 ${esc(x.last)}`:"";
+}
+
+/* 매입처 콤보: 글자 입력 → 포함 검색(공백·(주)·㈜ 무시), ↑↓ 이동, Enter 선택, Esc 닫기 */
+const vnorm=s=>String(s||"").replace(/\(주\)|㈜|주식회사|\s/g,"").toLowerCase();
+let supAct=-1, supFlat=[];
+function drawSupList(q){
+  const box=$("#supList"), nq=vnorm(q); let h=""; supFlat=[];
+  const hl=v=>{if(!nq)return esc(v);const n=vnorm(v),i=n.indexOf(nq);if(i<0)return esc(v);
+    // 원문 위치 찾기(공백 등 무시한 인덱스를 원문 인덱스로 환산)
+    let c=0,s=-1,e=-1;for(let k=0;k<v.length;k++){if(vnorm(v[k])==="")continue;if(c===i)s=k;if(c===i+nq.length-1){e=k+1;break;}c++;}
+    return s<0||e<0?esc(v):esc(v.slice(0,s))+"<mark>"+esc(v.slice(s,e))+"</mark>"+esc(v.slice(e));};
+  SUP.groups.forEach(g=>{
+    const os=g.o.filter(o=>!nq||vnorm(o.v).includes(nq)).slice(0,nq?60:30); if(!os.length)return;
+    h+=`<div class="cb-g">${esc(g.t)}</div>`;
+    os.forEach(o=>{const i=supFlat.push(o.v)-1;h+=`<div class="cb-o${o.v===S.header.supplier?" cur":""}" role="option" data-i="${i}"><span>${hl(o.v)}</span><small>${esc(o.info)}</small></div>`;});
+  });
+  if(q&&q.trim()&&!supFlat.some(v=>v===q.trim())){const i=supFlat.push(q.trim())-1;h+=`<div class="cb-g">직접 입력</div><div class="cb-o" role="option" data-i="${i}"><span>‘${esc(q.trim())}’ 으로 입력</span><small>Enter</small></div>`;}
+  if(!h)h=`<div class="cb-none">${SUP.groups.length?"일치하는 매입처가 없습니다":"연동된 매입처가 없습니다 — 업체명을 직접 입력하세요"}</div>`;
+  box.innerHTML=h; supAct=supFlat.length?0:-1; markSupAct();
+}
+function markSupAct(){document.querySelectorAll("#supList .cb-o").forEach(el=>el.classList.toggle("act",+el.dataset.i===supAct));const a=$("#supList .cb-o.act");if(a)a.scrollIntoView({block:"nearest"});}
+function openSup(){$("#supList").hidden=false;$("#supIn").setAttribute("aria-expanded","true");drawSupList($("#supIn").value===S.header.supplier?"":$("#supIn").value);}
+function closeSup(){$("#supList").hidden=true;$("#supIn").setAttribute("aria-expanded","false");}
+function pickSup(v){
+  S.header.supplier=v; document.querySelector('[data-h="supplier"]').value=v; $("#supIn").value=v;
+  closeSup(); renderSupplier(); renderSheet(); save();
+}
+
+/* ---------- 발주서 ---------- */
+function orderRows(){
+  const rows=[];let no=1;
+  plan.forEach(g=>{const [mat,t]=g.key.split("|");g.patterns.forEach(p=>{rows.push({no:no++,mat,t:Number(t),mw:p.mw,size:`${tl(t)} × ${fw(p.mw)} × C`,qty:p.rep,unitW:g.weight,totW:g.weight*p.rep,pattern:patternText(p),trim:fw(p.mw-p.used),yield:(p.used/p.mw*100).toFixed(1)});});});
+  return rows;
+}
+function renderSheet(){
+  const H=S.header,rows=orderRows(),totQ=rows.reduce((a,r)=>a+r.qty,0),totW=rows.reduce((a,r)=>a+r.totW,0);
+  let h=`<div class="sign"><div><span>담당</span><i></i></div><div><span>검토</span><i></i></div><div><span>승인</span><i></i></div></div><h3>발 주 서</h3>
+  <table style="margin-bottom:12px"><tbody>
+   <tr><th style="width:14%">공급사</th><td style="width:36%">${esc(H.supplier)} 귀하</td><th style="width:14%">발주처</th><td>${esc(H.company)}</td></tr>
+   <tr><th>발주일</th><td>${esc(H.date)}</td><th>담당자 / 연락처</th><td>${esc(H.person)} ${H.tel?"/ "+esc(H.tel):""}</td></tr>
+   <tr><th>납기 요청일</th><td>${esc(H.due)}</td><th>납품장소</th><td>${esc(H.place)}</td></tr></tbody></table>
+  <table style="margin-bottom:12px"><thead><tr><th>No</th><th>재질</th><th>규격 (t × W × C)</th><th>슬리팅 패턴 (mm × 열)</th><th>트림</th><th>수율</th><th>수량(본)</th><th>단중(kg)</th><th>중량(kg)</th></tr></thead><tbody>`;
+  if(!rows.length)h+=`<tr><td colspan="9" style="text-align:center;color:#777;padding:18px">선택된 주문 품목이 없습니다</td></tr>`;
+  rows.forEach(r=>h+=`<tr><td>${r.no}</td><td>${esc(r.mat)}</td><td>${esc(r.size)}</td><td>${esc(r.pattern)}</td><td>${r.trim}</td><td>${r.yield}%</td><td style="text-align:right">${fmt(r.qty)}</td><td style="text-align:right">${fmt(r.unitW)}</td><td style="text-align:right">${fmt(r.totW)}</td></tr>`);
+  h+=`<tr><th colspan="6" style="text-align:center">합 계</th><th style="text-align:right">${totQ}</th><th></th><th style="text-align:right">${fmt(totW)}</th></tr></tbody></table>
+  <table><tbody>
+   <tr><th style="width:14%">코일 내경(ID)</th><td style="width:36%">${esc(H.id)} mm</td><th style="width:14%">최대 외경(OD)</th><td>${H.od?esc(H.od)+" mm":"-"}</td></tr>
+   <tr><th>슬릿 최대중량</th><td>${H.maxw?fmt(+H.maxw)+" kg":"-"}</td><th>폭 공차</th><td>${esc(H.tol)}</td></tr>
+   <tr><th>도금량/표면</th><td>${esc(H.coat)}</td><th>포장</th><td>${esc(H.pack)}</td></tr>
+   <tr><th>비고</th><td colspan="3" style="white-space:pre-wrap">${esc(H.note)}${H.note?"\n":""}※ 슬리팅 패턴은 코일 1본 기준 배열이며, 트림은 양측 균등 배분 기준입니다.</td></tr></tbody></table>`;
+  $("#sheet").innerHTML=h;
+}
+function orderText(){
+  const H=S.header,rows=orderRows();
+  let t=`[코일 발주] ${H.supplier||""}\n발주일 ${H.date||"-"} / 납기 ${H.due||"-"} / 납품 ${H.place||"-"}\n발주처 ${H.company||"-"} ${H.person||""} ${H.tel||""}\n\n`;
+  rows.forEach(r=>t+=`${r.no}. ${r.mat} ${r.size} — ${fmt(r.qty)}본 (${fmt(r.totW)}kg)\n   슬리팅: ${r.pattern} / 트림 ${r.trim}mm\n`);
+  t+=`\n합계 ${fmt(rows.reduce((a,r)=>a+r.qty,0))}본, ${fmt(rows.reduce((a,r)=>a+r.totW,0))}kg\nID ${H.id} / OD max ${H.od||"-"} / 폭공차 ${H.tol||"-"} / 포장 ${H.pack||"-"}`;
+  if(H.coat)t+=` / 표면 ${H.coat}`; if(H.note)t+=`\n비고: ${H.note}`;
+  return t;
+}
+function exportXlsx(){
+  if(typeof XLSX==="undefined"){alert("엑셀 저장 기능을 불러오지 못했습니다. 인터넷 연결 후 다시 열어주세요.");return;}
+  const H=S.header,rows=orderRows();
+  const aoa=[["발 주 서"],[],["공급사",H.supplier,"","발주처",H.company],["발주일",H.date,"","담당자/연락처",`${H.person} ${H.tel}`],["납기 요청일",H.due,"","납품장소",H.place],[],
+    ["No","재질","두께(t)","코일폭(mm)","슬리팅 패턴(mm×열)","트림(mm)","수율(%)","수량(본)","단중(kg)","중량(kg)"]];
+  rows.forEach(r=>aoa.push([r.no,r.mat,r.t,r.mw,r.pattern,+r.trim,+r.yield,r.qty,Math.round(r.unitW),Math.round(r.totW)]));
+  aoa.push(["합계","","","","","","",rows.reduce((a,r)=>a+r.qty,0),"",Math.round(rows.reduce((a,r)=>a+r.totW,0))],[],
+    ["코일 내경(ID)",H.id,"","최대 외경(OD)",H.od],["슬릿 최대중량(kg)",H.maxw,"","폭 공차",H.tol],["도금량/표면",H.coat,"","포장",H.pack],["비고",H.note]);
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"]=[{wch:14},{wch:18},{wch:8},{wch:14},{wch:34},{wch:9},{wch:8},{wch:9},{wch:10},{wch:11}];
+  ws["!merges"]=[{s:{r:0,c:0},e:{r:0,c:9}}];
+  const lanes=[["No","재질","두께","패턴 반복(본)","순번","슬릿폭(mm)","구분","슬릿 1본 중량(kg)"]];
+  let no=1; plan.forEach(g=>{const [m,t]=g.key.split("|");g.patterns.forEach(p=>{p.lanes.forEach((l,i)=>lanes.push([no,m,+t,p.rep,i+1,l.w,l.extra?"재고보충":"주문",Math.round(g.weight*l.w/p.mw)]));no++;});});
+  const ws2=XLSX.utils.aoa_to_sheet(lanes); ws2["!cols"]=[{wch:5},{wch:10},{wch:6},{wch:12},{wch:6},{wch:11},{wch:9},{wch:16}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"발주서"); XLSX.utils.book_append_sheet(wb,ws2,"슬리팅상세");
+  XLSX.writeFile(wb,`코일발주_${(H.supplier||"").replace(/[\\/:*?"<>|]/g,"")}_${H.date||today}.xlsx`);
+}
+
+/* ---------- 슬라이드 상세 패널 ---------- */
+function openDetail(k){
+  const it=IDX&&IDX.items.get(k); if(!it)return;
+  openKey=k; DMODE="raw"; $("#dToggle").hidden=false; document.querySelectorAll("#inv tr").forEach(tr=>tr.classList.toggle("open",tr.dataset.k===k));
+  document.querySelectorAll("#result tr[data-open]").forEach(tr=>tr.classList.toggle("open",tr.dataset.open===k));
+  const ps=it.ps||{}, cv=coverOf(it), u=ps.unit||"KG";
+  $("#dTitle").textContent=`${it.mat} ${tl(it.t)}t × ${fw(it.w)}mm`;
+  $("#dBadge").innerHTML=cv==null?"":cv<1?'<span class="badge bad">부족</span>':cv<(+S.target||2)?'<span class="badge warn">주의</span>':'<span class="badge ok">여유</span>';
+  updToggle();
+  let h=`<div class="kpis">
+    <div class="kpi"><div class="k">현재고</div><div class="v">${it.stockKg==null?"-":fmt(it.stockKg)+" kg"}</div><div class="s">${L.invYm?esc(L.invYm)+" 월재고":it.manual?"수동 입력":"월재고 없음"}</div></div>
+    <div class="kpi"><div class="k">재고 개월수</div><div class="v">${cv==null?"-":cv.toFixed(1)+"개월"}</div><div class="s">목표 ${S.target}개월</div></div>
+    <div class="kpi"><div class="k">원자재 발주주기</div><div class="v">${ps.cycle?Math.round(ps.cycle.days)+"일":"-"}</div><div class="s">${ps.cycle?"월 "+(30.4/ps.cycle.days).toFixed(1)+"회 · 총 "+ps.cycle.count+"회":"매입 2회 미만"}</div></div>
+    <div class="kpi"><div class="k">월평균 매입량</div><div class="v">${ps.avgM?fmt(ps.avgM)+" "+esc(u):"-"}</div><div class="s">최근 12개월 평균</div></div>
+    <div class="kpi"><div class="k">연 매입량</div><div class="v">${ps.yearQty?fmt(ps.yearQty)+" "+esc(u):"-"}</div><div class="s">${ps.yearAmt?won(ps.yearAmt)+"원":""}</div></div>
+    <div class="kpi"><div class="k">최근 매입 / 다음 예상</div><div class="v" style="font-size:13.5px">${esc(ps.last||"-")}</div><div class="s">${ps.cycle?"다음 "+esc(ps.cycle.next):""}</div></div></div>`;
+  if(ps.n){
+    const mx=Math.max(1,...ps.months.map(m=>m.qty));
+    h+=`<h4>월별 매입량 (${esc(ps.months[0].ym)} ~ ${esc(ps.months[11].ym)}, ${esc(u)})</h4><div class="mbars">${ps.months.map(m=>`<div style="height:${m.qty/mx*100}%" title="${m.ym}: ${fmt(m.qty)}">${m.qty?`<span>${m.qty>=1000?fmt(m.qty/1000,1)+"t":fmt(m.qty)}</span>`:""}</div>`).join("")}</div>
+      <div class="mlabels">${ps.months.map(m=>`<span>${+m.ym.slice(5)}월</span>`).join("")}</div>`;
+    h+=`<h4>매입처</h4><div class="tbl-wrap"><table><thead><tr><th>매입처</th><th class="r">12개월(${esc(u)})</th><th class="r">누적 금액</th><th class="r">평균단가</th><th>최근</th></tr></thead><tbody>`+
+      ps.vendors.map(v=>`<tr><td>${esc(v.vendor)}</td><td class="r">${fmt(v.yqty)}</td><td class="r">${won(v.amt)}</td><td class="r">${v.qty?fmt(v.amt/v.qty):"-"}</td><td>${esc(v.last)}</td></tr>`).join("")+`</tbody></table></div>`;
+    h+=`<h4>연도별 매입</h4><div class="tbl-wrap"><table><thead><tr><th>연도</th><th class="r">수량(${esc(u)})</th><th class="r">금액</th></tr></thead><tbody>`+
+      Object.keys(ps.byYear).sort().reverse().map(y=>`<tr><td>${y}</td><td class="r">${fmt(ps.byYear[y].qty)}</td><td class="r">${won(ps.byYear[y].amt)}</td></tr>`).join("")+`</tbody></table></div>`;
+  }else h+=`<h4>매입</h4><div class="empty">이 규격의 매입 기록이 연동 데이터에 없습니다.</div>`;
+  // 사용품목
+  const prods=productsFor(it);
+  h+=`<h4>사용품목 · 매출 (${IDX.salEnd?esc(ymAdd(IDX.salEnd,-11))+" ~ "+esc(IDX.salEnd):"매출 없음"})</h4>`;
+  if(!L.invYm)h+=`<div class="empty">영업분석도구의 <b>월재고현황(자재품목)</b> 데이터가 없어 사용품목을 연결할 수 없습니다. 영업분석도구에서 월재고 파일을 불러온 뒤 ‘다시 불러오기’를 누르세요.</div>`;
+  else if(!prods.length)h+=`<div class="empty">${esc(L.invYm)} 재고표에서 이 원자재(${esc(tl(it.t))}x${esc(fw(it.w))})를 자재품목으로 쓰는 제품을 찾지 못했습니다.</div>`;
+  else{
+    const tq=prods.reduce((a,p)=>a+p.sales.qty,0),ta=prods.reduce((a,p)=>a+p.sales.amt,0);
+    const cAll=new Map(); prods.forEach(p=>p.sales.custList.forEach(c=>{const x=cAll.get(c.cust)||{amt:0,qty:0};x.amt+=c.amt;x.qty+=c.qty;cAll.set(c.cust,x);}));
+    const custs=[...cAll].map(([c,x])=>({cust:c,amt:x.amt,qty:x.qty,n:prods.filter(p=>p.sales.custs.has(c)).length})).sort((a,b)=>b.amt-a.amt);
+    const pct=v=>ta?v/ta*100:0;
+    const bar=v=>`<div class="pbar"><i style="width:${Math.max(0,Math.min(100,pct(v)))}%"></i><span>${pct(v).toFixed(pct(v)<1&&v>0?1:0)}%</span></div>`;
+    const q=n=>fmt(n,n>0&&n<10?1:0);
+    // 요약 한 줄
+    h+=`<table class="dt sum"><tr><th>사용품목</th><th>매출처</th><th class="r">월평균 매출</th><th class="r">월 수량</th><th class="r">연 매출</th><th class="r">연 수량</th></tr>
+      <tr><td><b>${prods.length}</b>개</td><td><b>${custs.length}</b>곳</td><td class="r"><b>${won(ta/12)}</b></td><td class="r">${q(tq/12)}</td><td class="r"><b>${won(ta)}</b></td><td class="r">${fmt(tq)}</td></tr></table>`;
+    h+=`<div class="seg" role="tablist"><button data-dtab="prod" class="${DTAB==="prod"?"on":""}">사용품목별 (${prods.length})</button><button data-dtab="cust" class="${DTAB==="cust"?"on":""}">매출처별 (${custs.length})</button></div>`;
+    if(DTAB==="prod"){
+      h+=`<table class="dt"><thead><tr><th>품목</th><th class="r">월 매출</th><th class="r">월 수량</th><th class="r">연 매출</th><th class="r">연 수량</th><th style="width:64px">비중</th></tr></thead><tbody>`;
+      prods.forEach((p,i)=>{const s=p.sales, nc=s.custList.length;
+        h+=`<tr class="pr${nc?" xp":""}" data-pi="${i}"><td class="nm"><span class="car">${nc?"▸":""}</span><div><b>${esc(p.name)}</b><small>${esc(p.code)}${p.spec?" · "+esc(p.spec):""}${nc?` · 매출처 ${nc}곳`:""}</small></div></td>
+          <td class="r">${s.amt?won(s.amt/12):"-"}</td><td class="r">${s.qty?q(s.qty/12):"-"}</td><td class="r"><b>${s.amt?won(s.amt):"-"}</b></td><td class="r">${s.qty?fmt(s.qty):"-"}</td><td>${s.amt?bar(s.amt):'<span class="muted" style="font-size:11px">매출 없음</span>'}</td></tr>`;
+        if(nc)h+=`<tr class="sub" data-sub="${i}" hidden><td colspan="6"><table class="dt mini"><thead><tr><th>매출처</th><th class="r">연 매출</th><th class="r">연 수량</th><th class="r">품목 내 비중</th></tr></thead><tbody>${
+          s.custList.slice(0,10).map(c=>`<tr><td>${esc(c.cust)}</td><td class="r">${won(c.amt)}</td><td class="r">${fmt(c.qty)}</td><td class="r">${s.amt?(c.amt/s.amt*100).toFixed(0):0}%</td></tr>`).join("")+
+          (nc>10?(()=>{const r=s.custList.slice(10),ra=r.reduce((a,c)=>a+c.amt,0),rq=r.reduce((a,c)=>a+c.qty,0);return `<tr class="muted"><td>외 ${r.length}곳</td><td class="r">${won(ra)}</td><td class="r">${fmt(rq)}</td><td class="r">${s.amt?(ra/s.amt*100).toFixed(0):0}%</td></tr>`;})():"")}</tbody></table></td></tr>`;
+      });
+      h+=`</tbody></table>`;
+    }else{
+      const lim=DCUST_ALL?custs.length:15;
+      h+=`<table class="dt"><thead><tr><th>매출처</th><th class="r">연 매출</th><th class="r">월평균</th><th class="r">연 수량</th><th class="r">품목</th><th style="width:64px">비중</th></tr></thead><tbody>`+
+        custs.slice(0,lim).map(c=>`<tr><td>${esc(c.cust)}</td><td class="r"><b>${won(c.amt)}</b></td><td class="r">${won(c.amt/12)}</td><td class="r">${fmt(c.qty)}</td><td class="r">${c.n}</td><td>${bar(c.amt)}</td></tr>`).join("")+`</tbody></table>`;
+      if(custs.length>15)h+=`<button class="sm" data-dmore style="width:100%;margin-top:6px">${DCUST_ALL?"접기":`나머지 ${custs.length-15}곳 더 보기`}</button>`;
+    }
+  }
+  $("#dBody").innerHTML=h; $("#dBody").scrollTop=0;
+  $("#drawer").classList.add("on"); $("#scrim").classList.add("on"); $("#drawer").setAttribute("aria-hidden","false");
+}
+let DTAB="prod", DCUST_ALL=false;
+$("#dBody").addEventListener("click",e=>{
+  const t=e.target.closest("[data-dtab]");
+  if(t){DTAB=t.dataset.dtab;DCUST_ALL=false;const y=$("#dBody").scrollTop;openDetail(openKey);$("#dBody").scrollTop=y;return;}
+  if(e.target.closest("[data-dmore]")){DCUST_ALL=!DCUST_ALL;const y=$("#dBody").scrollTop;openDetail(openKey);$("#dBody").scrollTop=y;return;}
+  const r=e.target.closest("tr.xp");
+  if(r){const s=$(`#dBody tr[data-sub="${r.dataset.pi}"]`);if(s){s.hidden=!s.hidden;r.classList.toggle("open",!s.hidden);}}
+});
+function updToggle(){if(!openKey)return;const on=+S.sel[openKey]>0;const b=$("#dToggle");b.textContent=on?"주문에서 빼기":"＋ 주문에 추가";b.className=on?"sm":"sm pri";}
+function closeDetail(){openKey=null;$("#drawer").classList.remove("on");$("#scrim").classList.remove("on");$("#drawer").setAttribute("aria-hidden","true");document.querySelectorAll("#inv tr.open,#result tr.open").forEach(tr=>tr.classList.remove("open"));}
+function toggleSel(k,on){
+  if(on){const it=IDX.items.get(k);S.sel[k]=it?defaultQty(it):1;} else delete S.sel[k];
+}
+
+/* ---------- 전체 갱신 ---------- */
+function refresh(){runOptimize();renderTabs();renderInv();renderResult();drawCoil();renderSupplier();renderSheet();renderManual();renderSide();save();}
+function refreshKeepInputs(){runOptimize();renderTabs();renderResult();drawCoil();renderSupplier();renderSheet();updManualSum();updCoilSum();save();}
+const msg=t=>{$("#msg").textContent=t;clearTimeout(msg._t);msg._t=setTimeout(()=>$("#msg").textContent="",4000);};
+
+/* ---------- 이벤트 ---------- */
+fillMatSelects();
+if(!GRADE_DENS[S.mat])S.mat="EGI";
+$("#mat").value=S.mat; $("#thk").value=S.t; $("#mw").value=S.mw; $("#trim").value=S.trim; $("#lanes").value=S.lanes; $("#minslit").value=S.minslit; $("#fill").checked=!!S.fill; $("#showAll").checked=!!S.showAll; $("#target").value=S.target;
+$("#nMat").value=S.mat; $("#nT").value=S.t;
+/* 코일 폭 빠른 선택: 추가(입력칸 Enter) · 수정(더블클릭) · 삭제(×) */
+if(!Array.isArray(S.presets))S.presets=defaults.presets.slice();
+function renderPresets(){
+  S.presets=[...new Set(S.presets.map(Number).filter(w=>w>=100&&w<=2600))].sort((a,b)=>a-b);
+  $("#presets").innerHTML=S.presets.map(w=>`<span class="pchip"><button class="chip" data-w="${w}" title="클릭: 선택 · 더블클릭: 수정">${fw(w)}</button><button class="px" data-del="${w}" title="${fw(w)} 삭제" aria-label="${fw(w)} 삭제">×</button></span>`).join("")
+    +`<input id="padd" class="padd" type="number" min="100" max="2600" step="1" placeholder="＋ 폭 추가" title="폭을 입력하고 Enter">`;
+  syncPresets();
+}
+function syncPresets(){document.querySelectorAll("#presets .chip").forEach(b=>b.classList.toggle("on",+b.dataset.w===+S.mw));}
+renderPresets();
+$("#mat").addEventListener("change",e=>{S.mat=normMat(e.target.value);$("#nMat").value=S.mat;renderInv();refreshKeepInputs();renderManual();});
+$("#thk").addEventListener("input",e=>{const v=+e.target.value;S.t=v>0?v:0;$("#nT").value=e.target.value;renderInv();refreshKeepInputs();renderManual();});
+$("#presets").addEventListener("click",e=>{
+  const d=e.target.closest("[data-del]");
+  if(d){const w=+d.dataset.del;if(!confirm(`코일 폭 ${fw(w)}mm를 빠른 선택에서 삭제할까요?`))return;S.presets=S.presets.filter(x=>x!==w);renderPresets();save();msg(`코일 폭 ${fw(w)}mm를 삭제했습니다.`);return;}
+  const b=e.target.closest("[data-w]");if(!b)return;S.mw=+b.dataset.w;$("#mw").value=S.mw;syncPresets();refreshKeepInputs();renderManual();
+});
+$("#presets").addEventListener("dblclick",e=>{
+  const b=e.target.closest("[data-w]");if(!b)return;const old=+b.dataset.w;
+  const v=prompt("빠른 선택 폭을 수정합니다 (mm, 100~2600)",fw(old)); if(v==null)return;
+  const n=+String(v).replace(/[^\d.]/g,""); if(!(n>=100&&n<=2600)){alert("100~2600 사이 숫자를 입력하세요.");return;}
+  S.presets=S.presets.map(w=>w===old?n:w); if(S.mw===old){S.mw=n;$("#mw").value=n;refreshKeepInputs();renderManual();}
+  renderPresets();save();
+});
+$("#presets").addEventListener("keydown",e=>{
+  if(e.target.id!=="padd"||e.key!=="Enter")return; e.preventDefault();
+  const n=+e.target.value; if(!(n>=100&&n<=2600)){alert("100~2600 사이 숫자를 입력하세요.");return;}
+  S.presets.push(n); renderPresets(); save(); $("#padd").focus();
+});
+$("#mw").addEventListener("input",e=>{const v=+e.target.value;if(v>=100){S.mw=v;syncPresets();refreshKeepInputs();renderManual();}});
+$("#trim").addEventListener("input",e=>{S.trim=Math.max(0,+e.target.value||0);refreshKeepInputs();});
+$("#lanes").addEventListener("input",e=>{const v=+e.target.value;if(v>=1){S.lanes=v;refreshKeepInputs();}});
+$("#minslit").addEventListener("input",e=>{S.minslit=+e.target.value||0;refreshKeepInputs();});
+$("#fill").addEventListener("change",e=>{S.fill=e.target.checked;refreshKeepInputs();});
+$("#showAll").addEventListener("change",e=>{S.showAll=e.target.checked;renderInv();save();});
+$("#target").addEventListener("input",e=>{S.target=+e.target.value||2;renderInv();save();});
+
+// 직접 입력
+const mrows=$("#mrows");
+mrows.addEventListener("input",e=>{const row=e.target.closest(".mrow");if(!row)return;const i=+row.dataset.i,f=e.target.dataset.m;if(f==="w"||f==="q"){S.manualRows[i][f]=e.target.value;refreshKeepInputs();}});
+mrows.addEventListener("click",e=>{const b=e.target.closest("[data-m=del]");if(!b)return;const i=+b.closest(".mrow").dataset.i;S.manualRows.splice(i,1);if(!S.manualRows.length)S.manualRows.push({w:"",q:""});renderManual();refreshKeepInputs();});
+mrows.addEventListener("keydown",e=>{
+  if(e.key!=="Enter")return; e.preventDefault();
+  const row=e.target.closest(".mrow"),i=+row.dataset.i;
+  if(e.target.dataset.m==="w"){row.querySelector('[data-m="q"]').focus();return;}
+  if(i===S.manualRows.length-1)S.manualRows.push({w:"",q:""});
+  renderManual(i+1);
+});
+$("#maddRow").addEventListener("click",()=>{S.manualRows.push({w:"",q:""});renderManual(S.manualRows.length-1);save();});
+
+// 생산 가능 제품 카드
+$("#stats").addEventListener("click",e=>{if(e.target.closest("#prodCard"))openProdDetail();});
+// 코일 탭
+$("#tabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(!b)return;if(b.dataset.tab==="+")addCoil();else setTab(b.dataset.tab);});
+// 코일 N 편집기
+const cp=$("#coilPanel");
+cp.addEventListener("input",e=>{
+  const c=curCoil(); if(!c)return; const t=e.target;
+  if(t.dataset.c&&t.tagName!=="SELECT"){c[t.dataset.c]=t.dataset.c==="rep"?Math.max(1,Math.floor(+t.value||1)):(+t.value||0);refreshKeepInputs();return;}
+  const row=t.closest(".mrow"); if(row&&t.dataset.l){c.lanes[+row.dataset.li][t.dataset.l]=t.value;refreshKeepInputs();}
+});
+cp.addEventListener("change",e=>{const c=curCoil();if(c&&e.target.dataset.c==="mat"){c.mat=e.target.value;refreshKeepInputs();}});
+cp.addEventListener("click",e=>{
+  const c=curCoil(); if(!c)return;
+  if(e.target.closest("[data-cadd]")){c.lanes.push({w:"",n:""});renderCoilEditor(c.lanes.length-1);save();return;}
+  const d=e.target.closest("[data-l=del]");
+  if(d){c.lanes.splice(+d.closest(".mrow").dataset.li,1);renderCoilEditor();refreshKeepInputs();return;}
+  if(e.target.closest("[data-cdel]"))deleteCoil(c.id);
+});
+cp.addEventListener("keydown",e=>{
+  if(e.key!=="Enter"||!e.target.dataset.l)return; e.preventDefault();
+  const c=curCoil(), row=e.target.closest(".mrow"), i=+row.dataset.li;
+  if(e.target.dataset.l==="w"){row.querySelector('[data-l="n"]').focus();return;}
+  if(i===c.lanes.length-1)c.lanes.push({w:"",n:""});
+  renderCoilEditor(i+1); save();
+});
+function deleteCoil(id){
+  const i=S.coils.findIndex(c=>c.id===id); if(i<0)return;
+  if(!confirm(`코일 ${i+1}(직접 배열)을 삭제할까요?`))return;
+  S.coils.splice(i,1); delete S.groupWeights["coil:"+id];
+  if(S.tab===id)S.tab="auto";
+  refresh(); msg(`코일 ${i+1}을 삭제했습니다.`);
+}
+
+// 재고 리스트
+$("#q").addEventListener("input",e=>{Q=e.target.value;renderInv();});
+$("#q").addEventListener("keydown",e=>{if(e.key==="Escape"){e.stopPropagation();e.target.value="";Q="";renderInv();}});
+$("#invHead").addEventListener("click",e=>{
+  const th=e.target.closest("th[data-sort]"); if(!th)return; const k=th.dataset.sort;
+  // 숫자 칸은 처음 클릭 시 큰 값부터, 글자 칸은 가나다순부터 → 다시 클릭 시 반대 → 세 번째 클릭 시 기본 정렬
+  const first=(k==="mat"||k==="status")?1:-1;
+  if(!S.sort||S.sort.k!==k)S.sort={k,d:first};
+  else if(S.sort.d===first)S.sort={k,d:-first};
+  else S.sort=null;
+  renderInv(); save();
+});
+const inv=$("#inv");
+inv.addEventListener("change",e=>{const tr=e.target.closest("tr[data-k]");if(!tr)return;if(e.target.dataset.f==="sel"){toggleSel(tr.dataset.k,e.target.checked);renderInv();refreshKeepInputs();updToggle();}});
+inv.addEventListener("input",e=>{const tr=e.target.closest("tr[data-k]");if(!tr)return;if(e.target.dataset.f==="qty"){S.sel[tr.dataset.k]=Math.max(0,Math.floor(+e.target.value||0));refreshKeepInputs();}});
+inv.addEventListener("click",e=>{const tr=e.target.closest("tr[data-k]");if(!tr||e.target.closest("input"))return;openDetail(tr.dataset.k);});
+$("#selShort").addEventListener("click",()=>{visibleItems().forEach(it=>{const cv=coverOf(it);if(cv!=null&&cv<(+S.target||2))S.sel[it.k]=defaultQty(it);});refresh();});
+$("#selNone").addEventListener("click",()=>{S.sel={};refresh();updToggle();});
+$("#add").addEventListener("click",()=>{
+  const w=+$("#nW").value,t=+$("#nT").value,mat=normMat($("#nMat").value);
+  if(!(w>0)||!(t>0)||!mat){alert("재질, 두께, 폭을 입력하세요.");$("#nW").focus();return;}
+  S.manual.push({mat,t,w,stock:+$("#nS").value||0,use:+$("#nU").value||0});
+  $("#nW").value=""; buildIndex(); refresh();
+});
+
+// 슬라이드 패널
+$("#dClose").addEventListener("click",closeDetail); $("#scrim").addEventListener("click",closeDetail);
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDetail();});
+$("#dToggle").addEventListener("click",()=>{if(!openKey)return;toggleSel(openKey,!(+S.sel[openKey]>0));renderInv();refreshKeepInputs();updToggle();});
+
+// 결과
+/* 최적 조합 삭제: 조합 전체(강종·두께 묶음) 또는 패턴 하나.
+   패턴 삭제 = 그 패턴이 만드는 폭별 수량(열수×본수)만큼 주문 요청을 줄임 → 직접 입력 줄 먼저, 다음 재고 리스트 선택분 */
+function reduceDemand(spec,w,n){
+  const manualSpec=S.mat&&S.t>0?specKey(S.mat,S.t):"";
+  if(spec===manualSpec)S.manualRows.forEach(r=>{if(n>0&&Math.abs(+r.w-w)<1e-6&&+r.q>0){const d=Math.min(n,+r.q);r.q=String(+r.q-d);n-=d;if(+r.q===0)r.q="";}});
+  Object.keys(S.sel).forEach(k=>{const [m,t,ww]=k.split("|");if(n>0&&m+"|"+t===spec&&Math.abs(+ww-w)<1e-6){const d=Math.min(n,+S.sel[k]);S.sel[k]=+S.sel[k]-d;n-=d;if(S.sel[k]<=0)delete S.sel[k];}});
+}
+/* 되돌리기(취소): 최적화·추가·소폭/패턴/조합 삭제 직전 상태를 최대 30단계까지 보관 */
+const UNDO=[], UNDO_KEYS=["sel","manualRows","locked","coils","tab","groupWeights","fixed"];
+function pushUndo(label){
+  const snap={label,active:{...active}}; UNDO_KEYS.forEach(k=>snap[k]=JSON.parse(JSON.stringify(S[k]===undefined?null:S[k])));
+  UNDO.push(snap); if(UNDO.length>30)UNDO.shift();
+}
+function undo(){
+  const snap=UNDO.pop(); if(!snap){msg("되돌릴 작업이 없습니다.");return;}
+  UNDO_KEYS.forEach(k=>{if(snap[k]!==null)S[k]=snap[k];});
+  selLane=null; refresh(); updToggle();
+  if(plan[snap.active.g]&&plan[snap.active.g].patterns[snap.active.p]){active=snap.active;drawCoil();renderResultActive();}
+  msg(`‘${snap.label}’ 작업을 취소했습니다.`+(UNDO.length?` (더 되돌릴 수 있는 작업 ${UNDO.length}개)`:""));
+}
+document.addEventListener("keydown",e=>{
+  if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&(e.key==="z"||e.key==="Z")){
+    if(e.target.closest&&e.target.closest("input,select,textarea,[contenteditable]"))return;   // 입력칸 안에서는 브라우저 기본 되돌리기
+    e.preventDefault(); undo();
+  }
+});
+function cleanManualRows(){S.manualRows=S.manualRows.filter(r=>+r.w>0&&+r.q>0);if(!S.manualRows.length)S.manualRows=[{w:"",q:""}];}
+$("#result").addEventListener("click",e=>{
+  const ub=e.target.closest("[data-undo]"); if(ub){e.stopPropagation();undo();return;}
+  const ob=e.target.closest("[data-opt]"); if(!ob)return; e.stopPropagation(); pushUndo("최적화"); reoptimize(ob.dataset.opt);
+});
+$("#result").addEventListener("click",e=>{
+  const dg=e.target.closest("[data-delg]"), dp=e.target.closest("[data-delp]");
+  if(!dg&&!dp)return; e.stopPropagation();
+  const mg=plan[dg?+dg.dataset.delg:+dp.dataset.delp.split(":")[0]];
+  if(mg&&mg.manual){pushUndo(mg.label+" 삭제");const n=S.coils.length;deleteCoil(mg.cid);if(S.coils.length===n)UNDO.pop();return;}   // 직접 배열 코일은 탭째 삭제
+  if(dg){
+    const g=plan[+dg.dataset.delg]; if(!g)return;
+    if(!confirm(`${specLabel(g.key)} 조합(코일 ${fmt(g.patterns.reduce((a,p)=>a+p.rep,0))}본)을 삭제할까요?\n이 규격의 주문 수량과 직접 입력 폭이 모두 지워집니다.`))return;
+    pushUndo(specLabel(g.key)+" 조합 삭제");
+    Object.keys(S.sel).forEach(k=>{const [m,t]=k.split("|");if(m+"|"+t===g.key)delete S.sel[k];});
+    if(S.mat&&S.t>0&&specKey(S.mat,S.t)===g.key)S.manualRows=[{w:"",q:""}];
+    S.fixed=S.fixed.filter(x=>x.key!==g.key); delete S.locked[g.key];
+    msg(`${specLabel(g.key)} 조합을 삭제했습니다.`);
+  }else{
+    const [gi,pi]=dp.dataset.delp.split(":").map(Number), g=plan[gi], p=g&&g.patterns[pi]; if(!p)return;
+    pushUndo("패턴 삭제"); const L=lockGroup(g); L.splice(pi,1);   // 나머지 패턴은 그대로 둠(다시 조합 안 함)
+    const cnt={}; p.lanes.forEach(l=>{if(!l.extra)cnt[l.w]=(cnt[l.w]||0)+1;});
+    Object.keys(cnt).forEach(w=>reduceDemand(g.key,+w,cnt[w]*p.rep));
+    cleanManualRows();
+    msg(`패턴 ${patternText(p)} ×${fmt(p.rep)}본을 삭제했습니다. 다시 조합하려면 ‘최적화’ 버튼을 누르세요.`);
+  }
+  active={g:0,p:0}; refresh(); updToggle();
+});
+$("#result").addEventListener("click",e=>{
+  const b=e.target.closest("[data-fill]"); if(!b)return; e.stopPropagation();
+  const k=b.dataset.fill; pushUndo(fw(+k.split("|")[2])+"mm 추가");
+  if(b.dataset.cid){   // 직접 배열 코일에는 열(lane)로 추가
+    const c=S.coils.find(x=>x.id===b.dataset.cid); if(!c)return; const w=+k.split("|")[2], n=+b.dataset.n||1;
+    c.lanes=c.lanes.filter(r=>+r.w>0||+r.n>0);
+    const r=c.lanes.find(x=>Math.abs(+x.w-w)<1e-6); if(r)r.n=String((+r.n||0)+n); else c.lanes.push({w:String(w),n:String(n)});
+    S.tab=c.id; refresh(); msg(`코일 ${S.coils.indexOf(c)+1}에 ${fw(w)}mm ${n}열을 추가했습니다.`); return;
+  }
+  // 자동 조합: 그 패턴(코일)에 바로 열을 넣고 배열은 고정, 주문 수량도 함께 늘림
+  const fb=b.closest(".fillbox"), gi=fb?+fb.dataset.fg:-1, pi=fb?+fb.dataset.fp:-1, g=plan[gi], p=g&&g.patterns[pi];
+  S.sel[k]=(+S.sel[k]||0)+(+b.dataset.q||1);
+  if(g&&p&&!g.manual){
+    const w=+k.split("|")[2], n=+b.dataset.n||1, L=lockGroup(g);
+    for(let i=0;i<n;i++)L[pi].lanes.push({w,extra:false});
+    L[pi].lanes.sort((a,b)=>b.w-a.w||(a.extra-b.extra));
+    refresh(); updToggle();
+    const ng=plan.findIndex(x=>!x.manual&&x.key===g.key); if(ng>=0){active={g:ng,p:pi};drawCoil();renderResultActive();}
+    msg(`선택한 코일(패턴 ${pi+1})에 ${fw(w)}mm ${n}열을 넣었습니다 (주문 ${fmt(+b.dataset.q)}본 추가).`); return;
+  }
+  refresh(); updToggle(); msg(`${k.split("|")[2]}mm ${fmt(+b.dataset.q)}본을 주문에 추가했습니다.`);
+});
+$("#result").addEventListener("click",e=>{
+  if(e.target.closest("[data-fill]"))return;
+  const r=e.target.closest("tr[data-open]"); if(!r)return;
+  openDetail(r.dataset.open);
+});
+$("#result").addEventListener("click",e=>{if(e.target.closest("[data-fill],[data-delg],[data-delp]")||e.target.closest("tr[data-open]"))return;const p=e.target.closest(".pat");if(!p)return;const g=plan[+p.dataset.g];if(!g)return;
+  if(g.manual){active={g:+p.dataset.g,p:+p.dataset.p};setTab(g.cid);}else{S.tab="auto";active={g:+p.dataset.g,p:+p.dataset.p};renderTabs();renderSide();drawCoil();renderResultActive();save();}
+});   // 화면 위치는 그대로 유지(스크롤 이동 없음)
+/* 코일 중량 입력: 1,000 단위 쉼표 표시(입력 중에도 자동), ↑↓ 키로 100kg씩 */
+function setGW(el,n){
+  const k=el.dataset.gw, raw=el.value, pos=el.selectionStart==null?raw.length:el.selectionStart;
+  const digitsBefore=raw.slice(0,pos).replace(/[^\d]/g,"").length;
+  el.value=n>0?fmt(n):"";
+  let i=0,c=0; while(i<el.value.length&&c<digitsBefore){if(/\d/.test(el.value[i]))c++;i++;}
+  try{el.setSelectionRange(i,i);}catch(_){}
+  S.groupWeights[k]=n||0; runOptimize(); renderStats(); renderSheet(); save();
+}
+$("#result").addEventListener("input",e=>{if(!e.target.dataset.gw)return;setGW(e.target,+e.target.value.replace(/[^\d]/g,"")||0);});
+$("#result").addEventListener("keydown",e=>{
+  if(!e.target.dataset.gw||!e.altKey||(e.key!=="ArrowUp"&&e.key!=="ArrowDown"))return; e.preventDefault();
+  const n=Math.max(0,(+e.target.value.replace(/[^\d]/g,"")||0)+(e.key==="ArrowUp"?100:-100));
+  e.target.value=fmt(n); setGW(e.target,n);
+});
+$("#result").addEventListener("change",e=>{if(e.target.dataset.gw)renderResult();});
+
+/* 메인 코일 그림: 소폭 선택·삭제
+   - 직접 배열 코일: 그 코일의 해당 폭 열 수를 1 줄임
+   - 자동 조합 패턴: 패턴을 그대로 '직접 배열 코일'로 옮긴 뒤 선택한 소폭을 뺌(나머지 주문은 다시 자동 조합) */
+function deleteLane(){
+  if(!selLane)return;
+  const g=plan[selLane.g], p=g&&g.patterns[selLane.p], ii=p?selLane.ii.filter(i=>p.lanes[i]):[];
+  selLane=null; if(!ii.length){drawCoil();return;}
+  pushUndo("소폭 삭제");
+  const delLanes=ii.map(i=>p.lanes[i]), w=`소폭 ${delLanes.length}개(${patternText({lanes:delLanes.map(l=>({w:l.w,extra:false}))})})`;
+  if(g.manual){
+    const c=S.coils.find(x=>x.id===g.cid); if(!c)return;
+    let miss=0;
+    delLanes.forEach(ln=>{
+      const r=c.lanes.find(x=>Math.abs(+x.w-ln.w)<1e-6&&Math.floor(+x.n)>0);
+      if(!r){miss++;return;}
+      r.n=String(Math.floor(+r.n)-1); if(+r.n<=0)c.lanes.splice(c.lanes.indexOf(r),1);
+    });
+    if(!c.lanes.length){   // 소폭을 모두 지우면 빈 코일 탭은 남기지 않음
+      S.coils.splice(S.coils.indexOf(c),1); delete S.groupWeights["coil:"+c.id]; if(S.tab===c.id)S.tab="auto";
+      refresh(); msg(`${g.label}의 소폭을 모두 지워 ${g.label} 탭을 없앴습니다.`); return;
+    }
+    refresh(); msg(`${g.label}에서 ${w}를 삭제했습니다.`+(miss?` (${miss}개는 찾지 못함)`:"")); return;
+  }
+  // 자동 조합 → 다시 조합하지 않고 지운 상태 그대로 둠(‘최적화’ 버튼을 눌러야 다시 조합)
+  const L=lockGroup(g), cnt={};
+  L[selLane_p(p,g)].lanes=L[selLane_p(p,g)].lanes.filter((_,i)=>!ii.includes(i));
+  delLanes.forEach(l=>{if(!l.extra)cnt[l.w]=(cnt[l.w]||0)+1;});
+  Object.keys(cnt).forEach(x=>reduceDemand(g.key,+x,cnt[x]*p.rep));
+  cleanManualRows();
+  const pi=g.patterns.indexOf(p), empty=!L[pi].lanes.length;
+  refresh();
+  const gi=plan.findIndex(x=>!x.manual&&x.key===g.key);
+  if(gi>=0){active={g:gi,p:empty?0:pi};drawCoil();renderResultActive();}
+  msg(`${w}를 삭제했습니다.`+(empty?` 남은 소폭이 없어 이 코일(×${fmt(p.rep)}본)은 빠졌습니다.`:"")+` 다시 조합하려면 ‘최적화’ 버튼을 누르세요.`);
+}
+/* 자동 조합 묶음을 지금 보이는 패턴 그대로 고정(S.locked) — 이미 고정돼 있어도 새로 붙은 패턴까지 포함해 다시 고정 */
+function lockGroup(g){
+  S.locked[g.key]=g.patterns.map(p=>({rep:p.rep,lanes:p.lanes.map(l=>({w:l.w,extra:!!l.extra}))}));
+  return S.locked[g.key];
+}
+const selLane_p=(p,g)=>g.patterns.indexOf(p);
+function reoptimize(key){
+  const g=plan.find(x=>!x.manual&&x.key===key), before=g?g.patterns.reduce((a,p)=>a+p.rep,0):0;
+  delete S.locked[key]; refresh();
+  const gi=plan.findIndex(x=>!x.manual&&x.key===key), after=gi>=0?plan[gi].patterns.reduce((a,p)=>a+p.rep,0):0;
+  if(gi>=0){active={g:gi,p:0};drawCoil();renderResultActive();}
+  msg(`${specLabel(key)} 최적화 완료: 코일 ${fmt(before)}본 → ${fmt(after)}본`);
+}
+const coilSvg=$("#coil");
+coilSvg.addEventListener("click",e=>{
+  if(e.target.closest("[data-ldel]")){e.stopPropagation();deleteLane();return;}
+  const h=e.target.closest("[data-li]");
+  if(h){   // 클릭할 때마다 선택에 추가, 이미 선택된 것은 다시 클릭하면 선택 취소
+    const i=+h.dataset.li;
+    if(!(selLane&&selLane.g===active.g&&selLane.p===active.p))selLane={g:active.g,p:active.p,ii:[]};
+    const k=selLane.ii.indexOf(i); if(k>=0)selLane.ii.splice(k,1); else selLane.ii.push(i);
+    if(!selLane.ii.length)selLane=null;
+  }
+  else selLane=null;
+  drawCoil();
+});
+document.addEventListener("keydown",e=>{
+  if(!selLane||(e.key!=="Delete"&&e.key!=="Backspace"))return;
+  if(e.target.closest&&e.target.closest("input,select,textarea,[contenteditable]"))return;
+  e.preventDefault(); deleteLane();
+});
+
+// 발주 정보
+document.querySelectorAll("[data-h]").forEach(el=>{
+  el.value=S.header[el.dataset.h]||"";
+  el.addEventListener("input",()=>{S.header[el.dataset.h]=el.value;if(el.dataset.h==="maxw"||el.dataset.h==="id"){renderResult();drawCoil();}if(el.dataset.h==="supplier")renderSupplier();renderSheet();save();});
+});
+const supIn=$("#supIn");
+supIn.addEventListener("focus",()=>{supIn.select();openSup();});
+supIn.addEventListener("input",()=>{$("#supList").hidden=false;drawSupList(supIn.value);});
+supIn.addEventListener("keydown",e=>{
+  const open=!$("#supList").hidden;
+  if(e.key==="ArrowDown"){e.preventDefault();if(!open)openSup();else if(supFlat.length){supAct=(supAct+1)%supFlat.length;markSupAct();}}
+  else if(e.key==="ArrowUp"){e.preventDefault();if(open&&supFlat.length){supAct=(supAct-1+supFlat.length)%supFlat.length;markSupAct();}}
+  else if(e.key==="Enter"){e.preventDefault();if(open&&supAct>=0)pickSup(supFlat[supAct]);}
+  else if(e.key==="Escape"){e.stopPropagation();supIn.value=S.header.supplier||"";closeSup();}
+});
+supIn.addEventListener("blur",()=>{setTimeout(()=>{if(document.activeElement!==supIn){supIn.value=S.header.supplier||"";closeSup();}},150);});
+$("#supList").addEventListener("mousedown",e=>{const o=e.target.closest(".cb-o");if(!o)return;e.preventDefault();pickSup(supFlat[+o.dataset.i]);});
+$("#supBtn").addEventListener("mousedown",e=>{e.preventDefault();if($("#supList").hidden){supIn.focus();openSup();}else closeSup();});
+$("#print").addEventListener("click",()=>window.print());
+/* 제목줄 버튼: 발주 정보 / 발주서 미리보기 창을 ‘코일(원판) 슬리팅 배열’ 위에 열고 닫기 */
+function togglePanel(id,btn,force){
+  const p=document.getElementById(id), open=force!=null?force:p.hidden;
+  p.hidden=!open; if(btn)btn.setAttribute("aria-pressed",open?"true":"false");
+  if(open){if(id==="sheetPanel")renderSheet(); window.scrollTo({top:0,behavior:"smooth"});}
+}
+$("#tOrder").addEventListener("click",()=>togglePanel("orderPanel",$("#tOrder")));
+$("#tSheet").addEventListener("click",()=>togglePanel("sheetPanel",$("#tSheet")));
+document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.close;togglePanel(id,id==="orderPanel"?$("#tOrder"):$("#tSheet"),false);}));
+$("#xlsx").addEventListener("click",exportXlsx);
+$("#copy").addEventListener("click",async()=>{const t=orderText();try{await navigator.clipboard.writeText(t);msg("복사했습니다.");}catch(e){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");msg("복사했습니다.");}catch(_){msg("복사 실패");}ta.remove();}});
+$("#relink").addEventListener("click",()=>{L.pur=[];L.sal=[];L.invYm="";L.invRaw=[];L.invProd=[];loadLinked();});
+$("#importBtn").addEventListener("click",()=>$("#importFile").click());
+$("#importFile").addEventListener("change",e=>{const f=[...e.target.files];e.target.value="";if(f.length)importFiles(f);});
+
+buildIndex(); refresh(); loadLinked();
+/* v17 : 로그인·서버 동기화 스크립트가 쓰는 연결 고리 */
+window.__coil={
+  get:()=>S, msg:t=>msg(t),
+  apply(data){   // 서버에서 받은 작업 내용을 화면에 그대로 적용(새로고침 없이)
+    window.__coilApplying=true;
+    try{
+      Object.keys(S).forEach(k=>delete S[k]);
+      Object.assign(S,JSON.parse(JSON.stringify(defaults)),data||{});
+      S.header=Object.assign({},defaults.header,S.header||{});
+      if(!Array.isArray(S.manualRows)||!S.manualRows.length)S.manualRows=[{w:"",q:""}];
+      if(!Array.isArray(S.coils))S.coils=[]; if(!S.locked||typeof S.locked!=="object")S.locked={}; if(!Array.isArray(S.fixed))S.fixed=[];
+      if(!S.sel||typeof S.sel!=="object")S.sel={}; if(!Array.isArray(S.manual))S.manual=[];
+      if(!Array.isArray(S.presets))S.presets=defaults.presets.slice();
+      if(!S.tab||(S.tab!=="auto"&&!S.coils.some(c=>c.id===S.tab)))S.tab="auto";
+      $("#mat").value=S.mat; $("#thk").value=S.t; $("#mw").value=S.mw; $("#trim").value=S.trim; $("#lanes").value=S.lanes; $("#minslit").value=S.minslit;
+      $("#fill").checked=!!S.fill; $("#showAll").checked=!!S.showAll; $("#target").value=S.target; $("#nMat").value=S.mat; $("#nT").value=S.t;
+      document.querySelectorAll("[data-h]").forEach(el=>{el.value=S.header[el.dataset.h]||"";});
+      UNDO.length=0; selLane=null; active={g:0,p:0};
+      buildIndex(); renderPresets(); refresh(); updToggle(); renderSupplier();
+      try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
+    }finally{window.__coilApplying=false;}
+  }
+};
+})();
+</script>
+<script>
+/* 숫자 입력칸 전체 1,000 단위 쉼표: type=number → text 로 바꾸고 value 는 쉼표 없는 숫자로 읽히게 함(기존 계산 코드 그대로 사용) */
+(function(){
+  const D=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value");
+  const fmtStr=v=>{v=String(v==null?"":v);if(v==="")return "";const m=v.replace(/,/g,"").match(/^(-?)(\d*)(\.?\d*)$/);if(!m)return v;return m[1]+m[2].replace(/\B(?=(\d{3})+(?!\d))/g,",")+m[3];};
+  function conv(el){
+    if(el.dataset.num!==undefined)return;
+    const raw=D.get.call(el), st=el.getAttribute("step")||"1";
+    el.dataset.num=""; el.type="text"; el.inputMode=/\./.test(st)||st==="any"?"decimal":"numeric"; el.autocomplete="off";
+    Object.defineProperty(el,"value",{configurable:true,get(){return D.get.call(this).replace(/,/g,"");},set(v){D.set.call(this,fmtStr(v));}});
+    D.set.call(el,fmtStr(raw));
+  }
+  const scan=root=>{if(root.matches&&root.matches('input[type="number"]'))conv(root);if(root.querySelectorAll)root.querySelectorAll('input[type="number"]').forEach(conv);};
+  scan(document);
+  new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{if(n.nodeType===1)scan(n);}))).observe(document.body,{childList:true,subtree:true});
+  // 입력 중에도 쉼표 자동(커서 위치 유지) — 앱의 입력 처리보다 먼저 실행(capture)
+  document.addEventListener("input",e=>{
+    const el=e.target; if(!el||el.dataset==null||el.dataset.num===undefined)return;
+    const raw=D.get.call(el), pos=el.selectionStart==null?raw.length:el.selectionStart;
+    const clean=raw.replace(/[^\d.\-]/g,""), keep=raw.slice(0,pos).replace(/[^\d.\-]/g,"").length, out=fmtStr(clean);
+    if(out===raw)return; D.set.call(el,out);
+    let i=0,c=0; while(i<out.length&&c<keep){if(out[i]!==",")c++;i++;} try{el.setSelectionRange(i,i);}catch(_){}
+  },true);
+  // ↑↓ 키 증감(기존 숫자칸과 같게)
+  window.numStep=function(el,d){
+    const st=el.getAttribute("step"), s=+st>0?+st:1, dec=((String(s).split(".")[1])||"").length;
+    let v=(+el.value||0)+d*s; const mn=el.getAttribute("min"), mx=el.getAttribute("max");
+    if(mn!==null&&mn!==""&&v<+mn)v=+mn; if(mx!==null&&mx!==""&&v>+mx)v=+mx;
+    el.value=String(+v.toFixed(dec));
+    el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}));
+  };
+  document.addEventListener("keydown",e=>{
+    const el=e.target; if(!e.altKey||!el||el.dataset==null||el.dataset.num===undefined||(e.key!=="ArrowUp"&&e.key!=="ArrowDown"))return;
+    e.preventDefault(); window.numStep(el,e.key==="ArrowUp"?1:-1);
+  },true);
+})();
+</script>
+<script>
+/* 방향키로 입력칸 이동(엑셀처럼): ↑↓ = 위·아래 칸, ←→ = 커서가 글자 맨 앞/맨 끝에 있을 때 이전·다음 칸
+   숫자 증감은 Alt+↑↓ 또는 칸 오른쪽 작은 화살표 */
+(function(){
+  const SEL='input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=button]),select,textarea';
+  const vis=el=>{if(el.disabled||el.readOnly)return false;const r=el.getBoundingClientRect();if(!r.width||!r.height)return false;const cs=getComputedStyle(el);return cs.visibility!=="hidden"&&!el.closest("[hidden],.drawer:not(.on)");};
+  const list=()=>[...document.querySelectorAll(SEL)].filter(vis);
+  function go(el){if(!el)return;el.focus({preventScroll:false});if(el.select&&el.tagName==="INPUT"&&el.type!=="date")try{el.select();}catch(_){}el.scrollIntoView({block:"nearest"});}
+  function vert(cur,dir){
+    const a=cur.getBoundingClientRect(), cx=a.left+a.width/2;
+    const c=list().filter(x=>x!==cur).map(x=>({x,r:x.getBoundingClientRect()}))
+      .filter(o=>dir>0?o.r.top>=a.bottom-4:o.r.bottom<=a.top+4);
+    if(!c.length)return null;
+    const rowY=dir>0?Math.min(...c.map(o=>o.r.top)):Math.max(...c.map(o=>o.r.bottom));
+    const row=c.filter(o=>dir>0?o.r.top-rowY<14:rowY-o.r.bottom<14);
+    // 같은 열(가로로 겹치는 칸) 우선, 없으면 가로 중심이 가장 가까운 칸
+    row.sort((p,q)=>{const ov=o=>o.r.right>a.left+2&&o.r.left<a.right-2?0:1;return ov(p)-ov(q)||Math.abs(p.r.left+p.r.width/2-cx)-Math.abs(q.r.left+q.r.width/2-cx);});
+    return row[0].x;
+  }
+  document.addEventListener("keydown",e=>{
+    if(e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||e.isComposing)return;
+    const k=e.key; if(k!=="ArrowUp"&&k!=="ArrowDown"&&k!=="ArrowLeft"&&k!=="ArrowRight")return;
+    const el=e.target; if(!el||!el.matches||!el.matches(SEL))return;
+    if(el.getAttribute("role")==="combobox"&&(k==="ArrowUp"||k==="ArrowDown"))return;   // 매입처 목록 선택은 그대로
+    if(el.tagName==="SELECT"&&(k==="ArrowUp"||k==="ArrowDown"))return;                 // 선택 상자는 값 고르기
+    if(el.tagName==="TEXTAREA"||el.type==="date")return;                                 // 여러 줄 글·날짜는 기본 동작
+    if(k==="ArrowLeft"||k==="ArrowRight"){
+      if(el.tagName==="INPUT"){let p0=null,p1=null,len=0;try{p0=el.selectionStart;p1=el.selectionEnd;len=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value").get.call(el).length;}catch(_){}
+        if(p0!=null){const all=p0===0&&p1===len&&len>0;if(!all&&(k==="ArrowLeft"?p0>0:p1<len))return;}}
+      const L=list(), i=L.indexOf(el), t=L[i+(k==="ArrowRight"?1:-1)]; if(!t)return;
+      e.preventDefault(); go(t); return;
+    }
+    const t=vert(el,k==="ArrowDown"?1:-1); if(!t)return;
+    e.preventDefault(); go(t);
+  });
+})();
+</script>
+<div id="nstep" aria-hidden="true"><button type="button" tabindex="-1" data-d="1" title="올리기"><svg viewBox="0 0 10 10"><path d="M2 6.5 5 3.5 8 6.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" tabindex="-1" data-d="-1" title="내리기"><svg viewBox="0 0 10 10"><path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+<script>
+/* 숫자 입력칸 스테퍼: 화면에 하나만 두고, 마우스를 올리거나 입력 중인 숫자칸 오른쪽 안쪽에 붙여 보여 줌 */
+(function(){
+  const st=document.getElementById("nstep"); let cur=null,hideT=0,rep=0,repT=0;
+  const isNum=el=>el&&el.tagName==="INPUT"&&el.dataset&&el.dataset.num!==undefined&&!el.disabled&&!el.readOnly;
+  function place(el){
+    const r=el.getBoundingClientRect();
+    if(!r.width||r.bottom<0||r.top>innerHeight){hide(true);return;}
+    st.style.left=(r.right-19)+"px"; st.style.top=(r.top+1)+"px"; st.style.height=(r.height-2)+"px";
+  }
+  function show(el){clearTimeout(hideT);cur=el;place(el);st.classList.add("show");}
+  function hide(now){clearTimeout(hideT);const f=()=>{if(cur&&document.activeElement===cur&&!now)return;st.classList.remove("show");cur=null;};now?f():hideT=setTimeout(f,150);}
+  function step(d){
+    if(!cur)return; const el=cur;
+    window.numStep(el,d);
+    if(document.body.contains(el))place(el);else hide(true);
+  }
+  document.addEventListener("mouseover",e=>{if(isNum(e.target))show(e.target);});
+  document.addEventListener("mouseout",e=>{if(isNum(e.target)&&!st.contains(e.relatedTarget))hide();});
+  document.addEventListener("focusin",e=>{if(isNum(e.target))show(e.target);});
+  document.addEventListener("focusout",e=>{if(isNum(e.target))hide();});
+  st.addEventListener("mouseenter",()=>clearTimeout(hideT));
+  st.addEventListener("mouseleave",e=>{if(e.relatedTarget!==cur)hide();});
+  st.addEventListener("mousedown",e=>{
+    const b=e.target.closest("button"); if(!b)return; e.preventDefault();   // 입력칸 포커스 유지
+    const d=+b.dataset.d; step(d);
+    repT=setTimeout(()=>{rep=setInterval(()=>step(d),70);},400);   // 누르고 있으면 계속 증감
+  });
+  const stop=()=>{clearTimeout(repT);clearInterval(rep);};
+  document.addEventListener("mouseup",stop); st.addEventListener("mouseleave",stop);
+  addEventListener("scroll",()=>{if(cur)place(cur);},true); addEventListener("resize",()=>{if(cur)place(cur);});
+})();
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════════
+   v17 · 로그인(매출분석도구와 같은 서버·계정) + 작업 내용 서버 동기화 + GitHub 업로드
+   - 저장 위치: 매출분석 서버 공용 문서의 coilOrderV1.users[아이디] = {at, by, json}
+     (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
+   - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
+   ═══════════════════════════════════════════════════════════ */
+var COIL_VER='v18';
+var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
+var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
+var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
+var AU={token:'',id:'',name:'',role:'',exp:0};
+function auLsGet(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}}
+function auLsSet(k,v){try{if(v==null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+/* 가공비 견적기와 같은 저장 이름 → 같은 주소(github.io)에서 견적기에 로그인해 두면 여기도 바로 로그인 */
+function auUrl(){try{return String(localStorage.getItem('dpt_auth_url')||AU_URL_DEFAULT).trim();}catch(e){return AU_URL_DEFAULT;}}
+function auKey(){try{return String(localStorage.getItem('dpt_auth_key')||AU_KEY_DEFAULT).trim();}catch(e){return AU_KEY_DEFAULT;}}
+/* 같은 주소에서 매출분석도구가 저장해 둔 동기화 설정(IndexedDB dbpastec_sales › kv › settings.gsync)에서 비밀키·주소를 찾음 */
+function auDiscoverKey(){
+  return new Promise(res=>{
+    if(auKey())return res(true);
+    try{
+      const rq=indexedDB.open('dbpastec_sales'); let made=false;
+      rq.onupgradeneeded=()=>{made=true;try{rq.transaction.abort();}catch(e){}};
+      rq.onerror=()=>res(false); rq.onblocked=()=>res(false);
+      rq.onsuccess=()=>{const db=rq.result; if(made||!db.objectStoreNames.contains('kv')){db.close();return res(false);}
+        try{const g=db.transaction('kv','readonly').objectStore('kv').get('settings');
+          g.onsuccess=()=>{db.close();const st=g.result,k=st&&st.gsync&&String(st.gsync.key||'').trim(),u=st&&st.gsync&&String(st.gsync.url||'').trim();
+            if(k){try{localStorage.setItem('dpt_auth_key',k);if(u&&!localStorage.getItem('dpt_auth_url'))localStorage.setItem('dpt_auth_url',u);}catch(e){}res(true);}else res(false);};
+          g.onerror=()=>{db.close();res(false);};
+        }catch(e){db.close();res(false);}};
+    }catch(e){res(false);}
+    setTimeout(()=>res(!!auKey()),2000);
+  });
+}
+function auValid(){return !!(AU.token&&AU.exp&&Date.now()<AU.exp);}
+function auIsMgr(){if(!auValid())return false;if(AU.role==='admin')return true;const n=String(AU.name||'').replace(/\s/g,''),i=String(AU.id||'').replace(/\s/g,'');return AU_MGR_NAMES.some(x=>x===n||x===i);}
+function auCanUpload(){return auValid()&&(auIsMgr()||AU.role==='uploader');}
+function auMask(s){try{s=String(s||'');const k='dbps@2026#au';let o='';for(let i=0;i<s.length;i++)o+=String.fromCharCode(s.charCodeAt(i)^k.charCodeAt(i%k.length));return btoa(unescape(encodeURIComponent(o)));}catch(e){return '';}}
+function auUnmask(s){try{const t=decodeURIComponent(escape(atob(String(s||''))));const k='dbps@2026#au';let o='';for(let i=0;i<t.length;i++)o+=String.fromCharCode(t.charCodeAt(i)^k.charCodeAt(i%k.length));return o;}catch(e){return '';}}
+function auRestore(){const v=auLsGet('dpt_auth_v1');if(v&&typeof v==='object')AU=Object.assign(AU,v);}
+function auPersist(keep){auLsSet('dpt_auth_v1',keep===false?null:{token:AU.token,id:AU.id,name:AU.name,role:AU.role,exp:AU.exp});}
+async function auCall(payload,timeoutMs){
+  payload.key=auKey(); if(AU.token&&!payload.token)payload.token=AU.token;
+  const ctl=new AbortController(), timer=setTimeout(()=>{try{ctl.abort();}catch(e){}},timeoutMs||30000);
+  let r;
+  try{r=await fetch(auUrl(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload),signal:ctl.signal});}
+  catch(e){throw new Error(e&&e.name==='AbortError'?'서버가 응답하지 않습니다(시간 초과)':'서버에 연결하지 못했습니다 — '+(e.message||e));}
+  finally{clearTimeout(timer);}
+  const tx=await r.text(); let d;
+  try{d=JSON.parse(tx);}catch(e){throw new Error('서버 응답을 읽지 못했습니다 (HTTP '+r.status+')');}
+  if(d&&d.error){const er=new Error(d.error);er.auth=!!d.authError||/세션\s*만료|로그인이\s*필요|토큰|unauthorized|expired/i.test(d.error);throw er;}
+  return d;
+}
+async function auTryAuto(){
+  const a=auLsGet('dpt_auth_auto_v1'); if(!a||!a.id)return false;
+  const pw=auUnmask(a.p); if(!pw)return false;
+  try{const d=await auCall({action:'auLogin',id:a.id,pw});if(!d||!d.token||!d.user)return false;
+    AU.token=d.token;AU.id=d.user.id;AU.name=d.user.name;AU.role=d.user.role;AU.exp=d.exp;auPersist();return true;}catch(e){return false;}
+}
+function auEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function auShowGate(){
+  if(document.getElementById('auGate'))return;
+  const d=document.createElement('div');
+  d.innerHTML=`<div id="auGate"><form id="auForm">
+    <div class="au-h"><div class="au-t">(주)동방파스텍</div><div class="au-s">코일 슬리팅 조합 · 발주기 · 로그인</div></div>
+    <label class="au-l">아이디</label><input id="auId" class="au-i" autocomplete="username" autocapitalize="off" spellcheck="false">
+    <label class="au-l">비밀번호</label><input id="auPw" class="au-i" type="password" autocomplete="current-password">
+    <label class="au-c"><input type="checkbox" id="auAuto"> 자동 로그인 <span>— 이 PC에서 다음부터 바로 접속</span></label>
+    <label class="au-c"><input type="checkbox" id="auKeep" checked> 이 PC에서 로그인 유지</label>
+    <button type="submit" id="auBtn" class="au-b">로그인</button>
+    <div id="auMsg" class="au-m"></div>
+    <div class="au-srv"><button type="button" class="au-srv-t" id="auSrvT">⚙ 서버 주소 설정</button>
+      <div id="auSrvBox" style="display:none">
+        <label class="au-l">웹앱 주소 (…/exec)</label><input id="auSrvUrl" class="au-i" spellcheck="false">
+        <label class="au-l">비밀키</label><input id="auSrvKey" class="au-i" spellcheck="false">
+        <div style="display:flex;gap:6px;margin-top:8px"><button type="button" class="au-b2" id="auSrvSave">저장</button></div>
+      </div></div>
+    <div class="au-f">계정은 <b>매출분석도구</b>와 같습니다. 계정 신청·승인은 관리자에게 요청하세요.<br>공용 PC에서는 자동 로그인을 켜지 마세요.</div>
+  </form></div>`;
+  document.body.appendChild(d.firstElementChild);
+  const $g=id=>document.getElementById(id), msg=$g('auMsg');
+  const a=auLsGet('dpt_auth_auto_v1'); if(a&&a.id){$g('auId').value=a.id;$g('auAuto').checked=true;}
+  else if(AU.id)$g('auId').value=AU.id;
+  setTimeout(()=>{($g('auId').value?$g('auPw'):$g('auId')).focus();},60);
+  auDiscoverKey().then(ok=>{if(!ok&&$g('auSrvBox')){$g('auSrvBox').style.display='';$g('auSrvUrl').value=auUrl();$g('auSrvKey').value='';
+    msg.style.color='var(--warn)';msg.textContent='이 PC에서 처음 사용합니다. 아래 «비밀키»에 매출분석도구 동기화 설정과 같은 비밀키를 한 번 입력하고 [저장]을 누르세요.';}});
+  $g('auSrvT').onclick=()=>{const b=$g('auSrvBox'),o=b.style.display==='none';b.style.display=o?'':'none';if(o){$g('auSrvUrl').value=auUrl();$g('auSrvKey').value=auKey();}};
+  $g('auSrvSave').onclick=()=>{const u=$g('auSrvUrl').value.trim(),k=$g('auSrvKey').value.trim();
+    if(u&&!/\/exec\s*$/.test(u)){msg.style.color='var(--bad)';msg.textContent='주소는 …/exec 로 끝나야 합니다';return;}
+    try{if(u)localStorage.setItem('dpt_auth_url',u);else localStorage.removeItem('dpt_auth_url');if(k)localStorage.setItem('dpt_auth_key',k);}catch(e){}
+    msg.style.color='var(--ok)';msg.textContent='저장했습니다. 로그인해 주세요.';};
+  $g('auForm').addEventListener('submit',async ev=>{
+    ev.preventDefault();
+    const id=$g('auId').value.trim(),pw=$g('auPw').value;
+    if(!id||!pw){msg.style.color='var(--bad)';msg.textContent='아이디와 비밀번호를 입력하세요.';return;}
+    if(!auKey()){const k=$g('auSrvKey')&&$g('auSrvKey').value.trim();if(k){try{localStorage.setItem('dpt_auth_key',k);}catch(e){}}else{msg.style.color='var(--bad)';msg.textContent='서버 비밀키가 없습니다. 아래 «서버 주소 설정»에 비밀키를 입력하세요.';$g('auSrvBox').style.display='';return;}}
+    const btn=$g('auBtn');btn.disabled=true;btn.textContent='확인 중…';msg.textContent='';
+    try{
+      const d=await auCall({action:'auLogin',id,pw});
+      if(!d||!d.token||!d.user)throw new Error('서버가 로그인 요청을 처리하지 못했습니다.');
+      AU.token=d.token;AU.id=d.user.id;AU.name=d.user.name;AU.role=d.user.role;AU.exp=d.exp;
+      auPersist($g('auKeep').checked);
+      auLsSet('dpt_auth_auto_v1',$g('auAuto').checked?{id,p:auMask(pw)}:null);
+      document.getElementById('auGate').remove(); auApply(); coilSync.start();
+    }catch(e){msg.style.color='var(--bad)';msg.textContent=(e.message||e);}
+    finally{btn.disabled=false;btn.textContent='로그인';}
+  });
+}
+function auLogout(){
+  coilSync.flush().finally(()=>{
+    AU={token:'',id:'',name:'',role:'',exp:0}; auPersist(false); auLsSet('dpt_auth_auto_v1',null);
+    coilSync.stop(); auApply(); auShowGate();
+  });
+}
+function auApply(){
+  document.documentElement.classList.toggle('au-in',auValid());
+  document.documentElement.classList.toggle('au-mgr',auCanUpload());
+  const chip=document.getElementById('auChip');
+  if(chip)chip.innerHTML=auValid()?`👤 <b>${auEsc(AU.name||AU.id)}</b> <small>${auEsc(AU_ROLE[AU.role]||AU.role||'')}</small> <button class="sm" id="auOut">로그아웃</button>`:'';
+  const o=document.getElementById('auOut'); if(o)o.onclick=auLogout;
+}
+
+/* ───── 작업 내용 동기화 ───── */
+const coilSync=(function(){
+  const NS='coilOrderV1', META='coilSyncMetaV1';
+  let meta=auLsGet(META)||{}, dirty=false, ready=false, applying=false, busy=false, pushT=0, pollT=0, lastErr='', lastAt=0, rev='';
+  const uid=()=>String(AU.id||AU.name||'').trim();
+  const metaSave=()=>{meta.uid=uid();auLsSet(META,meta);};
+  function chip(state,txt){
+    const c=document.getElementById('syncChip'); if(!c)return;
+    c.className=state||''; c.textContent=txt;
+    c.title=(lastErr?'오류: '+lastErr+'\n':'')+(meta.srvAt?'서버 저장본: '+new Date(meta.srvAt).toLocaleString('ko-KR'):'아직 서버에 저장한 적 없음')+'\n누르면 지금 동기화합니다.';
+  }
+  const hhmm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
+  function snapshot(){const o=JSON.parse(JSON.stringify(window.__coil.get()));delete o._at;return o;}
+  function apply(entry){let data;try{data=JSON.parse(entry.json);}catch(e){return false;}window.__coil.apply(data);return true;}
+  async function pull(force){
+    if(!auValid()||busy)return;
+    busy=true; chip('busy','☁ 받는 중…');
+    try{
+      const d=await auCall({action:'get',fields:NS,rev:force?'':rev});
+      if(d.revision!=null)rev=String(d.revision);
+      if(d.unchanged){lastErr='';chip('ok','☁ 동기화됨 '+hhmm(lastAt||Date.now()));return;}
+      const root=(d.data&&d.data[NS])||{}, e=root.users&&root.users[uid()];
+      if(meta.uid&&meta.uid!==uid()){meta={};}   // 다른 아이디로 바뀐 PC → 서버 기준으로 다시 맞춤
+      if(!e){ready=true; dirty=true; lastErr=''; busy=false; await push(); return;}   // 서버에 아직 없음 → 이 PC 내용을 처음 올림
+      if(e.at===meta.srvAt&&!force){ready=true;lastErr='';lastAt=Date.now();chip('ok','☁ 동기화됨 '+hhmm(lastAt));return;}
+      if(dirty&&ready&&(window.__coil.get()._at||0)>(e.at||0)){busy=false;await push();return;}   // 이 PC에서 더 나중에 고친 내용 → 올림
+      if(!meta.srvAt){   // 이 PC가 처음 동기화하는데 이 PC에도 작업 내용이 있으면 어느 쪽을 쓸지 물어봄
+        const L=window.__coil.get(), has=Object.keys(L.sel||{}).length||(L.manualRows||[]).some(r=>+r.w>0)||(L.coils||[]).length||Object.keys(L.locked||{}).length;
+        if(has&&JSON.stringify(snapshot())!==e.json&&!confirm(`서버에 저장된 작업 내용(${e.by||''} · ${new Date(e.at).toLocaleString('ko-KR')})이 있습니다.\n\n[확인] 서버 내용으로 바꾸기\n[취소] 이 PC의 지금 내용을 서버에 올리기`)){
+          ready=true; dirty=true; busy=false; await push(); return;
+        }
+      }
+      apply(e); meta.srvAt=e.at; metaSave(); dirty=false; ready=true; lastErr=''; lastAt=Date.now();
+      chip('ok','☁ 동기화됨 '+hhmm(lastAt));
+      if(e.by&&e.dev!==devId())window.__coil.msg(`서버에 저장된 최신 작업 내용을 불러왔습니다 (${new Date(e.at).toLocaleString('ko-KR')})`);
+    }catch(err){
+      lastErr=err.message||String(err);
+      if(err.auth){if(await auTryAuto()){auApply();busy=false;return pull(force);} auApply(); auShowGate();}
+      chip('err','☁ 동기화 오류');
+    }finally{busy=false;}
+  }
+  function devId(){let d=auLsGet('coilDevId');if(!d){d=Math.random().toString(36).slice(2,10);auLsSet('coilDevId',d);}return d;}
+  async function push(){
+    if(!auValid()||!ready||!dirty)return;
+    if(busy){clearTimeout(pushT);pushT=setTimeout(push,1200);return;}
+    busy=true; chip('busy','☁ 저장 중…');
+    const at=Date.now(), entry={at,by:AU.name||AU.id,dev:devId(),ver:COIL_VER,json:JSON.stringify(snapshot())};
+    const users={}; users[uid()]=entry;
+    try{
+      const d=await auCall({action:'save',clientBuild:'9999',clientApp:'coil_order',clientId:(AU.name||AU.id),fields:NS,data:{[NS]:{users}}},40000);
+      if(d.revision!=null)rev=String(d.revision);
+      meta.srvAt=at; metaSave(); dirty=false; lastErr=''; lastAt=Date.now();
+      chip('ok','☁ 저장됨 '+hhmm(lastAt));
+    }catch(err){
+      lastErr=err.message||String(err);
+      if(err.auth&&await auTryAuto()){auApply();busy=false;return push();}
+      if(err.auth){auApply();auShowGate();}
+      chip('err','☁ 저장 실패 — 다시 시도 중');
+      clearTimeout(pushT); pushT=setTimeout(push,15000);
+    }finally{busy=false;}
+  }
+  /* 앱이 저장할 때마다(save) → 2초 뒤 서버 저장 */
+  window.__coilOnSave=function(){
+    if(!ready)return;
+    window.__coil.get()._at=Date.now(); dirty=true; chip('busy','☁ 저장 대기…'); clearTimeout(pushT); pushT=setTimeout(push,2000);
+  };
+  function start(){
+    if(!auValid())return;
+    ready=false; pull(true);
+    clearInterval(pollT); pollT=setInterval(()=>{if(document.visibilityState==='visible'&&!dirty)pull(false);},45000);
+  }
+  function stop(){clearInterval(pollT);clearTimeout(pushT);ready=false;chip('','☁ 로그아웃');}
+  async function flush(){clearTimeout(pushT);if(dirty)await push();}
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&auValid()&&!dirty)pull(false);else if(document.visibilityState==='hidden')flush();});
+  addEventListener('beforeunload',e=>{if(dirty&&auValid()){flush();e.preventDefault();e.returnValue='';}});
+  return {start,stop,pull,push,flush,chipClick:()=>{if(dirty)push();else pull(true);}};
+})();
+
+/* ───── 새 버전 알림 (새 버전은 GitHub coil 저장소에 바로 올림 — 화면의 업로드 버튼은 없앰) ───── */
+async function verCheck(){
+  try{
+    const r=await fetch('https://api.github.com/repos/useran-coder/coil/commits?path=index.html&per_page=1',{cache:'no-store'});if(!r.ok)return;
+    const j=await r.json(), m=/v(\d+)/.exec((j[0]&&j[0].commit&&j[0].commit.message)||''); if(!m)return;
+    const latest=+m[1], mine=+COIL_VER.slice(1);
+    const vc=document.getElementById('verChip'); if(vc)vc.title='GitHub 최신 v'+latest;
+    if(latest>mine&&!document.getElementById('updBar')){
+      const onWeb=/github\.io$/.test(location.hostname), b=document.createElement('div'); b.id='updBar';
+      b.innerHTML=`새 버전 <b>v${latest}</b> 이 있습니다 (지금 ${COIL_VER}). `+(onWeb?`<button class="sm pri" id="updGo">새로 고침</button>`:`<button class="sm pri" id="updGo">🌐 웹에서 열기</button>`)+` <button class="sm" id="updX">닫기</button>`;
+      document.body.appendChild(b);
+      document.getElementById('updGo').onclick=()=>{coilSync.flush().finally(()=>{if(onWeb)location.reload();else window.open('https://useran-coder.github.io/coil/','_blank');});};
+      document.getElementById('updX').onclick=()=>b.remove();
+    }
+  }catch(e){}
+}
+
+/* ───── 시작 ───── */
+(function(){
+  const lb=document.querySelector('header.top .linkbar');
+  if(lb){
+    lb.insertAdjacentHTML('afterbegin',`<button id="syncChip" type="button">☁ 연결 중…</button>`);
+    lb.insertAdjacentHTML('beforeend',`<span id="auChip"></span><span id="verChip">${COIL_VER}</span>`);
+    document.getElementById('syncChip').onclick=()=>coilSync.chipClick();
+  }
+  auRestore();
+  (async()=>{
+    if(!auValid()){const ok=await auTryAuto();if(!ok){auApply();auShowGate();return;}}
+    auApply(); coilSync.start();
+  })();
+  setTimeout(verCheck,4000); setInterval(verCheck,600000);
+})();
+</script>
+</body>
+</html>
