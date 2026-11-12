@@ -153,6 +153,8 @@ td input[data-num]{width:64px;padding:3px 6px}
 .mrow{display:grid;grid-template-columns:24px 1fr 1fr 28px;gap:6px;align-items:center;margin-bottom:6px}
 .mrow input{width:100%;text-align:right}
 .mrow .i{font-size:11px;color:var(--muted);text-align:center}
+#mrows .mrow,.mhead.mh1{grid-template-columns:22px 18px 1fr 1fr 28px}.mone{display:flex;align-items:center;justify-content:center;cursor:pointer}.mone input{width:15px;height:15px;margin:0}
+.mmsg{grid-column:1/-1;font-size:11.5px;color:var(--muted);margin:-2px 0 2px 46px}.mmsg .ok{color:var(--ok)}.mmsg .bad{color:var(--bad)}
 .mhead{display:grid;grid-template-columns:24px 1fr 1fr 28px;gap:6px;font-size:11px;color:var(--muted);margin:6px 0 4px}
 .msum{display:flex;justify-content:space-between;font-size:12px;border-top:1px dashed var(--line);margin-top:8px;padding-top:8px}
 /* 결과 */
@@ -708,7 +710,7 @@ html{scrollbar-gutter:stable}
       <aside class="manual" id="autoPanel">
         <h3>직접 입력 (폭 · 수량)</h3>
         <div class="muted" style="font-size:12px" id="manualSpec"></div>
-        <div class="mhead"><span></span><span>폭 (mm)</span><span>수량 (본)</span><span></span></div>
+        <div class="mhead mh1"><span title="1본 고정">1본</span><span></span><span>폭 (mm)</span><span>수량 (본)</span><span></span></div>
         <div id="mrows"></div>
         <button class="sm" id="maddRow" style="width:100%">＋ 폭 추가</button>
         <div class="msum"><span id="msumW"></span><span id="msumL"></span></div>
@@ -1161,7 +1163,7 @@ let plan=[],active={g:0,p:0},selLane=null;   // selLane: 메인 그림에서 선
 function demandList(){
   const out=[];
   Object.keys(S.sel).forEach(k=>{const q=+S.sel[k];if(!(q>0))return;const [m,t,w]=k.split("|");out.push({spec:m+"|"+t,w:+w,qty:q,from:"list"});});
-  S.manualRows.forEach(r=>{const w=+r.w,q=+r.q;if(w>0&&q>0&&S.mat&&S.t>0)out.push({spec:specKey(S.mat,S.t),w,qty:q,from:"manual"});});
+  S.manualRows.forEach(r=>{const w=+r.w,q=+r.q;if(w>0&&q>0&&S.mat&&S.t>0&&!r.one)out.push({spec:specKey(S.mat,S.t),w,qty:q,from:"manual"});});   /* v87 : «1본 고정» 줄은 따로 1본에만 배열 */
   return out;
 }
 function runOptimize(){
@@ -1172,14 +1174,21 @@ function runOptimize(){
   // 고정 패턴(소폭을 지워 수정한 자동 조합 패턴)은 다시 계산하지 않고 같은 규격 묶음 맨 위에 그대로 표시
   // 손으로 고친 규격(S.locked)은 고친 패턴을 그대로 두고, 그 패턴으로 못 채운 주문만 새로 조합해 뒤에 붙임
   Object.keys(S.locked).forEach(k=>{S.locked[k]=(S.locked[k]||[]).filter(p=>p&&Array.isArray(p.lanes)&&p.lanes.length&&+p.rep>0);if(!S.locked[k].length)delete S.locked[k];});
-  const keys=[...new Set(Object.keys(groups).concat(Object.keys(S.locked)))];
+  /* v87 : «1본 고정» 줄 — 체크한 줄들을 입력 순서대로 코일 1본에만 넣고, 못 들어간 수량은 다음 본으로 넘기지 않고 표시 */
+  const ONE=window.__oneInfo={};let oneLanes=[],oneUsed=0;const oneCap=S.mw-S.trim;
+  S.manualRows.forEach((r,i)=>{if(!r.one)return;const w=+r.w,q=Math.floor(+r.q||0);if(!(w>0&&q>0&&S.mat&&S.t>0))return;
+    let fit=0;while(fit<q&&oneUsed+w<=oneCap+1e-6&&oneLanes.length<S.lanes){oneLanes.push({w,extra:false});oneUsed+=w;fit++;}
+    ONE[i]={req:q,fit,w};if(fit<q)warn.push(`직접 입력 ${i+1}번 ${fw(w)}mm: 1본 고정 — 요청 ${q}본 중 ${fit}본만 들어가고 ${q-fit}본은 못 넣음`);});
+  const oneKey=oneLanes.length?specKey(S.mat,S.t):"";
+  const keys=[...new Set(Object.keys(groups).concat(Object.keys(S.locked)).concat(oneKey?[oneKey]:[]))];
   plan=keys.sort((a,b)=>(a===specKey(S.mat,S.t)?-1:b===specKey(S.mat,S.t)?1:a.localeCompare(b))).map(k=>{
     const lk=(S.locked[k]||[]).map(p=>{const lanes=p.lanes.map(l=>({w:+l.w,extra:!!l.extra}));return {lanes,rep:+p.rep,used:Math.round(lanes.reduce((a,l)=>a+l.w,0)*10)/10,mw:S.mw,locked:true};});
     const made={}; lk.forEach(p=>p.lanes.forEach(l=>{if(!l.extra){const x=Math.round(l.w*10);made[x]=(made[x]||0)+p.rep;}}));
     const rest=(groups[k]||[]).map(d=>{const x=Math.round(d.w*10),take=Math.min(made[x]||0,+d.qty||0);made[x]=(made[x]||0)-take;return {...d,qty:(+d.qty||0)-take};}).filter(d=>d.qty>0);
     const r=optimizeGroup(rest,S.mw,S.trim,S.lanes,S.fill);
     r.patterns.forEach(p=>p.mw=S.mw);
-    return {key:k,items:groups[k]||[],patterns:lk.concat(r.patterns),errors:r.errors,weight:+S.groupWeights[k]||10000,wkey:k,mw:S.mw,locked:lk.length>0};
+    if(k===oneKey){const ln=oneLanes.slice().sort((a,b)=>b.w-a.w);lk.unshift({lanes:ln,rep:1,used:Math.round(oneUsed*10)/10,mw:S.mw,one:true});}
+    return {key:k,items:(groups[k]||[]).concat(k===oneKey?Object.keys(ONE).map(i=>({spec:k,w:ONE[i].w,qty:ONE[i].fit,from:"manual",one:true})).filter(d=>d.qty>0):[]),patterns:lk.concat(r.patterns),errors:r.errors,weight:+S.groupWeights[k]||10000,wkey:k,mw:S.mw,locked:lk.some(p=>p.locked)};
   });
   // 직접 배열 코일(탭) — 입력한 순서 그대로 1패턴
   S.coils.forEach((c,ci)=>{
@@ -1299,13 +1308,16 @@ function patternText(p){const m=new Map();p.lanes.forEach(l=>{const k=fw(l.w)+(l
 /* ---------- 우측 직접 입력 ---------- */
 function renderManual(focusIdx){
   $("#manualSpec").textContent=S.mat&&S.t>0?`규격: ${normMat(S.mat)} ${tl(S.t)}t · 코일 ${fw(S.mw)}mm`:"⚠ 위에서 재질·두께를 먼저 입력하세요";
-  $("#mrows").innerHTML=S.manualRows.map((r,i)=>`<div class="mrow" data-i="${i}"><span class="i">${i+1}</span>
+  $("#mrows").innerHTML=S.manualRows.map((r,i)=>`<div class="mrow" data-i="${i}"><label class="mone" title="체크하면 이 줄은 코일 1본에만 넣음 (넘치는 수량은 다음 본으로 넘기지 않음)"><input type="checkbox" data-m="one"${r.one?" checked":""}></label><span class="i">${i+1}</span>
     <input type="number" data-m="w" min="1" step="0.5" value="${esc(r.w)}" placeholder="폭">
     <input type="number" data-m="q" min="0" step="1" value="${esc(r.q)}" placeholder="본">
-    <button class="sm" data-m="del" title="줄 삭제">✕</button></div>`).join("");
-  updManualSum();
+    <button class="sm" data-m="del" title="줄 삭제">✕</button><div class="mmsg" data-mi="${i}"></div></div>`).join("");
+  updManualSum();updOneMsgs();
   if(focusIdx!=null){const el=$(`#mrows .mrow[data-i="${focusIdx}"] input[data-m="w"]`);if(el)el.focus();}
 }
+function updOneMsgs(){const I=window.__oneInfo||{};document.querySelectorAll("#mrows .mmsg").forEach(el=>{const i=+el.dataset.mi,o=I[i],r=S.manualRows[i];
+  if(!r||!r.one||!o){el.innerHTML=r&&r.one?'<span class="muted">1본 고정</span>':"";el.style.display=r&&r.one?"":"none";return;}el.style.display="";
+  el.innerHTML=o.fit<o.req?`1본 고정 · 요청 <b>${o.req}</b>본 → 들어감 <b class="ok">${o.fit}</b>본 · <b class="bad">${o.req-o.fit}본 못 넣음</b>`:`1본 고정 · 요청 ${o.req}본 모두 들어감`;});}
 function updManualSum(){
   let sw=0,n=0;S.manualRows.forEach(r=>{if(+r.w>0){sw+=+r.w;n++;}});
   const cap=S.mw-S.trim;
@@ -1870,7 +1882,8 @@ $("#target").addEventListener("input",e=>{S.target=+e.target.value||2;renderInv(
 
 // 직접 입력
 const mrows=$("#mrows");
-mrows.addEventListener("input",e=>{const row=e.target.closest(".mrow");if(!row)return;const i=+row.dataset.i,f=e.target.dataset.m;if(f==="w"||f==="q"){S.manualRows[i][f]=e.target.value;refreshKeepInputs();}});
+mrows.addEventListener("input",e=>{const row=e.target.closest(".mrow");if(!row)return;const i=+row.dataset.i,f=e.target.dataset.m;if(f==="w"||f==="q"){S.manualRows[i][f]=e.target.value;refreshKeepInputs();updOneMsgs();}});
+mrows.addEventListener("change",e=>{if(e.target.dataset.m!=="one")return;const i=+e.target.closest(".mrow").dataset.i;pushUndo("1본 고정 "+(e.target.checked?"켬":"끔"));if(e.target.checked)S.manualRows[i].one=1;else delete S.manualRows[i].one;refreshKeepInputs();updOneMsgs();});
 mrows.addEventListener("click",e=>{const b=e.target.closest("[data-m=del]");if(!b)return;const i=+b.closest(".mrow").dataset.i;S.manualRows.splice(i,1);if(!S.manualRows.length)S.manualRows.push({w:"",q:""});renderManual();refreshKeepInputs();});
 mrows.addEventListener("keydown",e=>{
   if(e.key!=="Enter")return; e.preventDefault();
@@ -2924,7 +2937,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v86';
+var COIL_VER='v87';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
