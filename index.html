@@ -1176,6 +1176,10 @@ function runOptimize(){
   Object.keys(S.locked).forEach(k=>{S.locked[k]=(S.locked[k]||[]).filter(p=>p&&Array.isArray(p.lanes)&&p.lanes.length&&+p.rep>0);if(!S.locked[k].length)delete S.locked[k];});
   /* v88 : 이 규격의 주문(재고 리스트 선택·직접 입력)이 하나도 없으면 손으로 고친 배열도 지움 — 입력이 없는데 그림이 남던 문제 */
   Object.keys(S.locked).forEach(k=>{if(!(groups[k]||[]).length)delete S.locked[k];});
+  /* v90 : 예전 버전에서 1본 고정 코일이 고정 배열로 복사돼 남은 것 정리 — 1본 고정 줄에만 있는 폭(일반 주문 없음)은 고정 배열에서 뺌 */
+  {const ow=S.mat&&S.t>0?S.manualRows.filter(r=>r.one&&+r.w>0).map(r=>+r.w):[],mk=S.mat&&S.t>0?specKey(S.mat,S.t):"";
+   if(ow.length&&S.locked[mk]){const gw=(groups[mk]||[]).map(d=>+d.w),bad=w=>ow.some(x=>Math.abs(x-w)<1e-6)&&!gw.some(x=>Math.abs(x-w)<1e-6);
+     S.locked[mk]=S.locked[mk].map(p=>({...p,lanes:p.lanes.filter(l=>l.extra||!bad(+l.w))})).filter(p=>p.lanes.some(l=>!l.extra));if(!S.locked[mk].length)delete S.locked[mk];}}
   /* v87 : «1본 고정» 줄 — 체크한 줄들을 입력 순서대로 코일 1본에만 넣고, 못 들어간 수량은 다음 본으로 넘기지 않고 표시 */
   const ONE=window.__oneInfo={};let oneLanes=[],oneUsed=0;const oneCap=S.mw-S.trim;
   S.manualRows.forEach((r,i)=>{if(!r.one)return;const w=+r.w,q=Math.floor(+r.q||0);if(!(w>0&&q>0&&S.mat&&S.t>0))return;
@@ -2018,7 +2022,8 @@ $("#result").addEventListener("click",e=>{
     msg(`${specLabel(g.key)} 조합을 삭제함.`);
   }else{
     const [gi,pi]=dp.dataset.delp.split(":").map(Number), g=plan[gi], p=g&&g.patterns[pi]; if(!p)return;
-    pushUndo("패턴 삭제"); const L=lockGroup(g); L.splice(pi,1);   // 나머지 패턴은 그대로 둠(다시 조합 안 함)
+    if(p.one){pushUndo("1본 고정 코일 삭제");S.manualRows.forEach(r=>{if(r.one)r.q="";});cleanManualRows();msg("1본 고정 코일을 삭제함 · 체크한 직접 입력 줄도 지움.");active={g:0,p:0};refresh();updToggle();return;}
+    pushUndo("패턴 삭제"); const L=lockGroup(g); L.splice(selLane_p(p,g),1);   // 나머지 패턴은 그대로 둠(다시 조합 안 함)
     const cnt={}; p.lanes.forEach(l=>{if(!l.extra)cnt[l.w]=(cnt[l.w]||0)+1;});
     Object.keys(cnt).forEach(w=>reduceDemand(g.key,+w,cnt[w]*p.rep));
     cleanManualRows();
@@ -2037,11 +2042,17 @@ $("#result").addEventListener("click",e=>{
   }
   // 자동 조합: 그 패턴(코일)에 바로 열을 넣고 배열은 고정, 주문 수량도 함께 늘림
   const fb=b.closest(".fillbox"), gi=fb?+fb.dataset.fg:-1, pi=fb?+fb.dataset.fp:-1, g=plan[gi], p=g&&g.patterns[pi];
+  if(g&&p&&!g.manual&&p.one){   // v90 : 1본 고정 코일에 넣으면 체크한 직접 입력 줄 수량을 늘림
+    const w=+k.split("|")[2], n=+b.dataset.n||1, c={}; c[w]=p.lanes.filter(l=>Math.abs(l.w-w)<1e-6).length+n;
+    setOneCounts(c); refresh(); updToggle();
+    const ng=plan.findIndex(x=>!x.manual&&x.key===g.key); if(ng>=0){active={g:ng,p:0};drawCoil();renderResultActive();}
+    msg(`1본 고정 코일에 ${fw(w)}mm ${n}열을 넣음.`); return;
+  }
   S.sel[k]=(+S.sel[k]||0)+(+b.dataset.q||1);
   if(g&&p&&!g.manual){
     const w=+k.split("|")[2], n=+b.dataset.n||1, L=lockGroup(g);
-    for(let i=0;i<n;i++)L[pi].lanes.push({w,extra:false});
-    L[pi].lanes.sort((a,b)=>b.w-a.w||(a.extra-b.extra));
+    const li=selLane_p(p,g); for(let i=0;i<n;i++)L[li].lanes.push({w,extra:false});
+    L[li].lanes.sort((a,b)=>b.w-a.w||(a.extra-b.extra));
     refresh(); updToggle();
     const ng=plan.findIndex(x=>!x.manual&&x.key===g.key); if(ng>=0){active={g:ng,p:pi};drawCoil();renderResultActive();}
     msg(`선택한 코일(패턴 ${pi+1})에 ${fw(w)}mm ${n}열을 넣음 (주문 ${fmt(+b.dataset.q)}본 추가).`); return;
@@ -2096,24 +2107,39 @@ function deleteLane(){
     }
     refresh(); msg(`${g.label}에서 ${w}를 삭제함.`+(miss?` (${miss}개는 찾지 못함)`:"")); return;
   }
+  if(p.one){   // v90 : 1본 고정 코일 — 남은 소폭 수로 직접 입력 수량을 맞춤(다른 코일로 나누지 않음)
+    const left={},ws=new Set(delLanes.map(l=>l.w));ws.forEach(x=>left[x]=0);
+    p.lanes.forEach((l,i)=>{if(!ii.includes(i)&&ws.has(l.w))left[l.w]++;});
+    setOneCounts(left); cleanManualRows(); refresh(); updToggle();
+    const gi=plan.findIndex(x=>!x.manual&&x.key===g.key); if(gi>=0){active={g:gi,p:0};drawCoil();renderResultActive();}
+    msg(`1본 고정 코일에서 ${w}를 삭제함 · 직접 입력 수량을 ${Object.keys(left).map(x=>fw(+x)+"mm "+left[x]+"본").join(", ")}으로 맞춤.`); return;
+  }
   // 자동 조합 → 다시 조합하지 않고 지운 상태 그대로 둠(‘최적화’ 버튼을 눌러야 다시 조합)
   const L=lockGroup(g), cnt={};
   L[selLane_p(p,g)].lanes=L[selLane_p(p,g)].lanes.filter((_,i)=>!ii.includes(i));
   delLanes.forEach(l=>{if(!l.extra)cnt[l.w]=(cnt[l.w]||0)+1;});
   Object.keys(cnt).forEach(x=>reduceDemand(g.key,+x,cnt[x]*p.rep));
   cleanManualRows();
-  const pi=g.patterns.indexOf(p), empty=!L[pi].lanes.length;
+  const pi=g.patterns.indexOf(p), empty=!L[selLane_p(p,g)].lanes.length;
   refresh();
   const gi=plan.findIndex(x=>!x.manual&&x.key===g.key);
   if(gi>=0){active={g:gi,p:empty?0:pi};drawCoil();renderResultActive();}
   msg(`${w}를 삭제함.`+(empty?` 남은 소폭이 없어 이 코일(×${fmt(p.rep)}본)은 빠짐.`:"")+` 다시 조합하려면 ‘최적화’ 버튼을 누르세요.`);
 }
 /* 자동 조합 묶음을 지금 보이는 패턴 그대로 고정(S.locked) — 이미 고정돼 있어도 새로 붙은 패턴까지 포함해 다시 고정 */
-function lockGroup(g){
-  S.locked[g.key]=g.patterns.map(p=>({rep:p.rep,lanes:p.lanes.map(l=>({w:l.w,extra:!!l.extra}))}));
+function lockGroup(g){   /* v90 : «1본 고정» 코일은 고정 배열에 넣지 않음(직접 입력 줄에서 따로 만듦) — 넣으면 같은 코일이 2본으로 나뉘어 보임 */
+  S.locked[g.key]=g.patterns.filter(p=>!p.one).map(p=>({rep:p.rep,lanes:p.lanes.map(l=>({w:l.w,extra:!!l.extra}))}));
   return S.locked[g.key];
 }
-const selLane_p=(p,g)=>g.patterns.indexOf(p);
+const selLane_p=(p,g)=>g.patterns.filter(x=>!x.one).indexOf(p);
+/* v90 : «1본 고정» 코일에서 소폭을 빼거나 넣으면 체크한 직접 입력 줄 수량을 그 코일에 실제 들어간 본수로 맞춤 */
+function setOneCounts(cntByW){
+  const I=window.__oneInfo||{};
+  Object.keys(cntByW).forEach(wk=>{const w=+wk;let R=cntByW[wk];
+    S.manualRows.forEach((r,i)=>{if(!r.one||Math.abs(+r.w-w)>1e-6)return;const fit=I[i]?I[i].fit:0,v=Math.min(R,fit);R-=v;r.q=v>0?String(v):"";});
+    if(R>0){const r=S.manualRows.find(r=>r.one&&Math.abs(+r.w-w)<1e-6);if(r)r.q=String((+r.q||0)+R);else{const e=S.manualRows.findIndex(r=>!(+r.w>0));const nr={w:String(w),q:String(R),one:1};if(e>=0)S.manualRows[e]=nr;else S.manualRows.push(nr);}}
+  });
+}
 function reoptimize(key){
   const g=plan.find(x=>!x.manual&&x.key===key), before=g?g.patterns.reduce((a,p)=>a+p.rep,0):0;
   delete S.locked[key]; refresh();
@@ -2939,7 +2965,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v89';
+var COIL_VER='v90';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
