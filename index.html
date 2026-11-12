@@ -1174,6 +1174,8 @@ function runOptimize(){
   // 고정 패턴(소폭을 지워 수정한 자동 조합 패턴)은 다시 계산하지 않고 같은 규격 묶음 맨 위에 그대로 표시
   // 손으로 고친 규격(S.locked)은 고친 패턴을 그대로 두고, 그 패턴으로 못 채운 주문만 새로 조합해 뒤에 붙임
   Object.keys(S.locked).forEach(k=>{S.locked[k]=(S.locked[k]||[]).filter(p=>p&&Array.isArray(p.lanes)&&p.lanes.length&&+p.rep>0);if(!S.locked[k].length)delete S.locked[k];});
+  /* v88 : 이 규격의 주문(재고 리스트 선택·직접 입력)이 하나도 없으면 손으로 고친 배열도 지움 — 입력이 없는데 그림이 남던 문제 */
+  Object.keys(S.locked).forEach(k=>{if(!(groups[k]||[]).length)delete S.locked[k];});
   /* v87 : «1본 고정» 줄 — 체크한 줄들을 입력 순서대로 코일 1본에만 넣고, 못 들어간 수량은 다음 본으로 넘기지 않고 표시 */
   const ONE=window.__oneInfo={};let oneLanes=[],oneUsed=0;const oneCap=S.mw-S.trim;
   S.manualRows.forEach((r,i)=>{if(!r.one)return;const w=+r.w,q=Math.floor(+r.q||0);if(!(w>0&&q>0&&S.mat&&S.t>0))return;
@@ -2937,7 +2939,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v87';
+var COIL_VER='v88';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
