@@ -215,6 +215,8 @@ td input[data-num]{width:64px;padding:3px 6px}
 .drawer .dt.sum td{white-space:normal}
 .mth{display:block;font-size:10px;color:var(--warn)}
 .mth.ok{color:var(--ok)}
+.mth.pl,.plg{color:#ea580c}.plg{font-weight:600}
+.plogbox{border:1px solid rgba(249,115,22,.4);background:rgba(249,115,22,.08);border-radius:8px;padding:7px 10px;margin:4px 0 8px;font-size:12.5px;line-height:1.55}
 .badt{color:var(--bad);font-weight:700}.warnt{color:var(--warn);font-weight:700}.okt{color:var(--ok);font-weight:700}
 .stat.all{border-style:dashed;background:var(--bg)}
 .stat.all .v{font-size:15px;color:var(--muted)}
@@ -1087,7 +1089,7 @@ function purStats(I,k){
 }
 
 function salesFor(code){
-  const arr=IDX.salByCode.get(code)||[]; const end=IDX.salEnd; const ws=new Set(ymRange(end||"0000-01",12));
+  const arr=Array.isArray(code)?code:(IDX.salByCode.get(code)||[]);   /* v93 : 배열(같은 품번 묶음)도 받음 */ const end=IDX.salEnd; const ws=new Set(ymRange(end||"0000-01",12));
   const o={qty:0,amt:0,custs:new Map(),months:{},lenSum:0,lenQty:0};
   arr.forEach(r=>{
     // 비고(내역)의 [길이] — 영업분석과 같은 방식으로 EA당 길이(mm) 평균
@@ -1097,10 +1099,26 @@ function salesFor(code){
   o.custList=[...o.custs.values()].sort((a,b)=>b.amt-a.amt);
   return o;
 }
-function productsFor(it){
-  const pm=IDX.prodBySpec.get(t2(it.t)+"|"+fw(it.w)); if(!pm)return [];
-  return [...pm.values()].filter(p=>!p.grade||p.grade===it.mat).map(p=>Object.assign({},p,{sales:salesFor(p.code)})).sort((a,b)=>b.sales.amt-a.sales.amt);
+/* v93 : 재고표 «자재품목» 연결 + 생산일지 «원자재 사용현황»(강종·두께·폭이 같은 소재를 실제로 쓴 품번)을 합침 */
+function salArrNk(code){
+  if(!window.PLOG)return IDX.salByCode.get(code)||[];
+  if(!IDX._salNk){IDX._salNk=new Map();IDX.salByCode.forEach((v,k)=>{const n=PLOG.nk(k);if(!IDX._salNk.has(n))IDX._salNk.set(n,[]);IDX._salNk.get(n).push(...v);});}
+  return IDX._salNk.get(PLOG.nk(code))||[];
 }
+function productsFor(it){
+  const pm=IDX.prodBySpec.get(t2(it.t)+"|"+fw(it.w));
+  const base=pm?[...pm.values()].filter(p=>!p.grade||p.grade===it.mat).map(p=>Object.assign({},p,{sales:salesFor(p.code)})):[];
+  const pl=(window.PLOG&&PLOG.ok())?PLOG.forRaw(it.mat,it.t,it.w):null;
+  if(pl){
+    const by=new Map(); base.forEach(p=>{const k=PLOG.nk(p.code);if(k&&!by.has(k))by.set(k,p);});
+    pl.list.forEach(q=>{const k=PLOG.nk(q.code), p=k&&by.get(k);
+      if(p){if(!p.plog)p.plog=q;return;}
+      const np={code:q.code,name:q.name,spec:q.spec,cat:"생산일지",grade:it.mat,stock:0,cost:0,plog:q,plogOnly:true,sales:salesFor(salArrNk(q.code))};
+      base.push(np); if(k)by.set(k,np);});
+  }
+  return base.sort((a,b)=>b.sales.amt-a.sales.amt||((b.plog?b.plog.used:0)-(a.plog?a.plog.used:0)));
+}
+const plogTag=p=>p&&p.plog?` · <span class="plg" title="생산일지 원자재 사용현황: 사용중량 합계 · 건수 · 최근 달">🏭 ${fmt(p.plog.used)}kg · ${p.plog.n}건 · ${esc(p.plog.last)}</span>`:"";
 
 /* ---------- 엑셀 직접 불러오기 (연동 데이터가 없을 때) ---------- */
 const PCOL={date:["입고일자","입고일","일자","전표일자"],vendor:["거래처","거래처명","업체명","매입처"],code:["품번","품목코드"],name:["품명","품목명"],spec:["규격"],unit:["단위"],qty:["입고수량","수량"],supply:["공급가","공급가액"],total:["합계액","합계"],big:["품목대분류"],mid:["품목중분류"],small:["품목소분류"]};
@@ -1597,7 +1615,7 @@ function rawPrice(k){
   return q>0?m/q:0;
 }
 function prodPlan(){
-  const out={raws:[],totalEA:0,prodN:0,monthQty:0,noLink:!L.invYm,ratio:L.ratio,yld:L.yld};
+  const out={raws:[],totalEA:0,prodN:0,monthQty:0,noLink:!L.invYm&&!(window.PLOG&&PLOG.ok()),ratio:L.ratio,yld:L.yld};
   if(!IDX)return out;
   const seen=new Set();
   plan.filter(inView).forEach(g=>{
@@ -1608,20 +1626,22 @@ function prodPlan(){
       const prods=productsFor({mat,t:+t,w}).map(p=>{
         const s=p.sales, Lm=s.lenQty?s.lenSum/s.lenQty:0;
         let wEA=0,method="";
-        if(Lm>0){wEA=(+t)*w*Lm*dens/1e6;method="정밀";}
+        if(p.plog&&p.plog.used>0&&p.plog.prod>0){wEA=p.plog.used/p.plog.prod;method="실측";}   /* v93 : 생산일지 사용중량÷생산수량 (손실 포함) */
+        else if(Lm>0){wEA=(+t)*w*Lm*dens/1e6;method="정밀";}
         else if(p.cost>0&&price>0){wEA=p.cost*(L.ratio/100)/price;method="추정";}
         return Object.assign(p,{wEA,method,len:Lm});
       });
       const usable=prods.filter(p=>p.wEA>0), tq=usable.reduce((a,p)=>a+p.sales.qty,0);
+      const tpl=usable.reduce((a,p)=>a+(p.plog?p.plog.used:0),0);   /* v93 : 생산일지가 있으면 실제 사용량 비율로 배분 */
       usable.forEach(p=>{
-        p.share=tq>0?p.sales.qty/tq:1/usable.length;
-        p.ea=kg*p.share*(L.yld/100)/p.wEA;
+        p.share=tpl>0?(p.plog?p.plog.used:0)/tpl:(tq>0?p.sales.qty/tq:1/usable.length);
+        p.ea=p.method==="실측"?kg*p.share/p.wEA:kg*p.share*(L.yld/100)/p.wEA;
         p.mQty=p.sales.qty/12; p.months=p.mQty>0?p.ea/p.mQty:null;
         out.totalEA+=p.ea; out.monthQty+=p.mQty;
         if(!seen.has(p.code)){seen.add(p.code);out.prodN++;}
       });
       prods.sort((a,b)=>(b.ea||0)-(a.ea||0));
-      out.raws.push({mat,t:+t,w,k,kg,slits:cnt[w],price,prods,usable:usable.length});
+      out.raws.push({mat,t:+t,w,k,kg,slits:cnt[w],price,prods,usable:usable.length,byPlog:tpl>0});
     });
   });
   out.months=out.monthQty>0?out.totalEA/out.monthQty:null;
@@ -1637,18 +1657,18 @@ function openProdDetail(){
   const tKg=PP.raws.reduce((a,r)=>a+r.kg,0);
   h+=`<table class="dt sum"><tr><th>원자재 구입</th><th class="r">사용 제품</th><th class="r">생산 가능</th><th class="r">월 판매량</th><th class="r">판매 기준</th></tr>
     <tr><td><b>${fmt(tKg)}</b> kg</td><td class="r"><b>${PP.prodN}</b>개</td><td class="r"><b>${fmt(PP.totalEA)}</b> EA</td><td class="r">${fmt(PP.monthQty)} EA</td><td class="r"><b>${PP.months==null?"-":PP.months.toFixed(1)+"개월분"}</b></td></tr></table>`;
-  h+=`<div class="muted" style="font-size:11.5px;margin:-4px 0 6px">수율 ${PP.yld}% · 재료비율 ${PP.ratio}% (영업분석 설정) · <b>정밀</b>=두께×폭×길이(매출 비고 [길이]) · <b>추정</b>=제품단가×재료비율÷원자재 kg단가 · 여러 제품이 같은 원자재를 쓰면 최근 12개월 판매수량 비율로 배분</div>`;
+  h+=`<div class="muted" style="font-size:11.5px;margin:-4px 0 6px">수율 ${PP.yld}% · 재료비율 ${PP.ratio}% (영업분석 설정) · <b>정밀</b>=두께×폭×길이(매출 비고 [길이]) · <b>추정</b>=제품단가×재료비율÷원자재 kg단가 · <b>실측</b>=생산일지 사용중량÷생산수량(손실 포함이라 수율 안 곱함) · 여러 제품이 같은 원자재를 쓰면 생산일지 사용량 비율(없으면 최근 12개월 판매수량 비율)로 배분${window.PLOG?` · <span class="plg">🏭 ${esc(PLOG.note())}</span>`:""}</div>`;
   if(PP.noLink)h+=`<div class="empty">영업분석도구의 <b>월재고현황(자재품목)</b>이 연동되지 않아 원자재를 쓰는 제품을 찾을 수 없음. 영업분석도구에서 월재고 파일을 불러온 뒤 상단 ‘다시 불러오기’를 누르세요.</div>`;
   else if(!PP.raws.length)h+=`<div class="empty">이 탭에 구입할 원자재가 없음.</div>`;
   let ri=0;
   PP.raws.forEach(r=>{
     h+=`<h4>${esc(r.mat)} ${tl(r.t)}t × ${fw(r.w)}mm <span class="muted" style="font-weight:400;font-size:12px">· 슬릿 ${fmt(r.slits)}본 · ${fmt(r.kg)}kg${r.price?` · ${fmt(r.price)}원/kg`:""}</span></h4>`;
-    if(!r.prods.length){h+=`<div class="empty">재고표에서 이 원자재(${tl(r.t)}x${fw(r.w)})를 자재품목으로 쓰는 제품이 없음.</div>`;return;}
+    if(!r.prods.length){h+=`<div class="empty">재고표·생산일지에서 이 원자재(${tl(r.t)}x${fw(r.w)})를 쓰는 제품이 없음.</div>`;return;}
     h+=`<table class="dt"><thead><tr><th>제품</th><th class="r">EA당 소재</th><th class="r">배분</th><th class="r">생산 가능</th><th class="r">월 판매</th><th class="r">개월분</th></tr></thead><tbody>`;
     r.prods.forEach(p=>{
       const i=ri++, nc=p.sales.custList.length;
-      h+=`<tr class="pr${nc?" xp":""}" data-pi="${i}"><td class="nm"><span class="car">${nc?"▸":""}</span><div><b>${esc(p.name)}</b><small>${esc(p.code)}${p.spec?" · "+esc(p.spec):""}${p.len?` · 길이 ${fmt(p.len)}mm`:""}</small></div></td>
-        <td class="r">${p.wEA>0?`${fmt(p.wEA,p.wEA<1?3:2)}kg<small class="mth ${p.method==="정밀"?"ok":""}">${p.method}</small>`:'<span class="muted">계산 불가</span>'}</td>
+      h+=`<tr class="pr${nc?" xp":""}" data-pi="${i}"><td class="nm"><span class="car">${nc?"▸":""}</span><div><b>${esc(p.name)}</b><small>${esc(p.code)}${p.spec?" · "+esc(p.spec):""}${p.len?` · 길이 ${fmt(p.len)}mm`:""}${plogTag(p)}</small></div></td>
+        <td class="r">${p.wEA>0?`${fmt(p.wEA,p.wEA<1?3:2)}kg<small class="mth ${p.method==="정밀"?"ok":p.method==="실측"?"pl":""}">${p.method}</small>`:'<span class="muted">계산 불가</span>'}</td>
         <td class="r">${p.share!=null?Math.round(p.share*100)+"%":"-"}</td>
         <td class="r"><b>${p.ea!=null?fmt(p.ea):"-"}</b></td>
         <td class="r">${p.mQty!=null?fmt(p.mQty,p.mQty<10?1:0):fmt(p.sales.qty/12)}</td>
@@ -1790,6 +1810,17 @@ async function exportXlsx(){
   XLSX.writeFile(wb,`코일발주_${(H.supplier||"").replace(/[\\/:*?"<>|]/g,"")}_${H.date||today}.xlsx`);
 }
 
+/* v93 : 생산일지 실제 사용 요약 (상세 패널 «사용품목» 위) */
+function plogBox(it){
+  if(!window.PLOG)return "";
+  if(!PLOG.ok())return `<div class="muted" style="font-size:11.5px;margin:2px 0 6px">🏭 ${esc(PLOG.note())}</div>`;
+  const pl=PLOG.forRaw(it.mat,it.t,it.w);
+  if(!pl)return `<div class="muted" style="font-size:11.5px;margin:2px 0 6px">🏭 생산일지에 이 원자재(${esc(it.mat)} ${esc(tl(it.t))}x${esc(fw(it.w))}) 사용 기록 없음 · ${esc(PLOG.note())}</div>`;
+  const ms=PLOG.recentMonths(12), avg=PLOG.avg(pl.byYm,12), cv=avg>0&&it.stockKg!=null?it.stockKg/avg:null;
+  return `<div class="plogbox"><b>🏭 생산일지 실제 사용</b> 월평균 <b>${fmt(avg)}kg</b> <span class="muted">(${esc((ms[0]||"").replace("-","."))}~${esc((ms[ms.length-1]||"").replace("-","."))} ${ms.length}개월, 이번 달 제외)</span>
+    · 사용 제품 <b>${pl.list.length}</b>개 · 합계 ${fmt(pl.used)}kg · ${pl.n}건 · 최근 ${esc(pl.last)}${cv!=null?` · 실사용 기준 재고 <b>${cv.toFixed(1)}개월</b>`:""}
+    <div class="muted" style="font-size:11px;margin-top:2px">${esc(PLOG.note())} · 강종·두께·폭이 같은 소재를 쓴 품번을 사용품목에 더함</div></div>`;
+}
 /* ---------- 슬라이드 상세 패널 ---------- */
 function openDetail(k){
   const it=IDX&&IDX.items.get(k); if(!it)return;
@@ -1818,8 +1849,9 @@ function openDetail(k){
   // 사용품목
   const prods=productsFor(it);
   h+=`<h4>사용품목 · 매출 (${IDX.salEnd?esc(ymAdd(IDX.salEnd,-11))+" ~ "+esc(IDX.salEnd):"매출 없음"})</h4>`;
-  if(!L.invYm)h+=`<div class="empty">영업분석도구의 <b>월재고현황(자재품목)</b> 데이터가 없어 사용품목을 연결할 수 없음. 영업분석도구에서 월재고 파일을 불러온 뒤 ‘다시 불러오기’를 누르세요.</div>`;
-  else if(!prods.length)h+=`<div class="empty">${esc(L.invYm)} 재고표에서 이 원자재(${esc(tl(it.t))}x${esc(fw(it.w))})를 자재품목으로 쓰는 제품을 찾지 못함.</div>`;
+  h+=plogBox(it);
+  if(!L.invYm&&!prods.length)h+=`<div class="empty">영업분석도구의 <b>월재고현황(자재품목)</b> 데이터가 없고 생산일지에도 이 원자재 사용 기록이 없어 사용품목을 연결할 수 없음.</div>`;
+  else if(!prods.length)h+=`<div class="empty">${esc(L.invYm)} 재고표·생산일지에서 이 원자재(${esc(tl(it.t))}x${esc(fw(it.w))})를 쓰는 제품을 찾지 못함.</div>`;
   else{
     const tq=prods.reduce((a,p)=>a+p.sales.qty,0),ta=prods.reduce((a,p)=>a+p.sales.amt,0);
     const cAll=new Map(); prods.forEach(p=>p.sales.custList.forEach(c=>{const x=cAll.get(c.cust)||{amt:0,qty:0};x.amt+=c.amt;x.qty+=c.qty;cAll.set(c.cust,x);}));
@@ -1834,7 +1866,7 @@ function openDetail(k){
     if(DTAB==="prod"){
       h+=`<table class="dt"><thead><tr><th>품목</th><th class="r">월 매출</th><th class="r">월 수량</th><th class="r">연 매출</th><th class="r">연 수량</th><th style="width:64px">비중</th></tr></thead><tbody>`;
       prods.forEach((p,i)=>{const s=p.sales, nc=s.custList.length;
-        h+=`<tr class="pr${nc?" xp":""}" data-pi="${i}"><td class="nm"><span class="car">${nc?"▸":""}</span><div><b>${esc(p.name)}</b><small>${esc(p.code)}${p.spec?" · "+esc(p.spec):""}${nc?` · 매출처 ${nc}곳`:""}</small></div></td>
+        h+=`<tr class="pr${nc?" xp":""}" data-pi="${i}"><td class="nm"><span class="car">${nc?"▸":""}</span><div><b>${esc(p.name)}</b><small>${esc(p.code)}${p.spec?" · "+esc(p.spec):""}${nc?` · 매출처 ${nc}곳`:""}${plogTag(p)}</small></div></td>
           <td class="r">${s.amt?won(s.amt/12):"-"}</td><td class="r">${s.qty?q(s.qty/12):"-"}</td><td class="r"><b>${s.amt?won(s.amt):"-"}</b></td><td class="r">${s.qty?fmt(s.qty):"-"}</td><td>${s.amt?bar(s.amt):'<span class="muted" style="font-size:11px">매출 없음</span>'}</td></tr>`;
         if(nc)h+=`<tr class="sub" data-sub="${i}" hidden><td colspan="6"><table class="dt mini"><thead><tr><th>매출처</th><th class="r">연 매출</th><th class="r">연 수량</th><th class="r">품목 내 비중</th></tr></thead><tbody>${
           s.custList.slice(0,10).map(c=>`<tr><td>${esc(c.cust)}</td><td class="r">${won(c.amt)}</td><td class="r">${fmt(c.qty)}</td><td class="r">${s.amt?(c.amt/s.amt*100).toFixed(0):0}%</td></tr>`).join("")+
@@ -2298,6 +2330,13 @@ window.__coil={
     }finally{window.__coilApplying=false;}
     try{window.__plateRender&&window.__plateRender();}catch(e){}
   }
+};
+/* v93 : 생산일지 자료가 새로 오면 생산 가능 제품 카드·열린 상세 패널 다시 그림 */
+window.__coilPlogRefresh=function(){
+  if(IDX)IDX._salNk=null;
+  renderStats();
+  const dr=$("#drawer");
+  if(dr&&dr.classList.contains("on")&&DMODE==="raw"&&openKey){const y=$("#dBody").scrollTop;openDetail(openKey);$("#dBody").scrollTop=y;}
 };
 })();
 </script>
@@ -2990,7 +3029,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v92';
+var COIL_VER='v93';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
@@ -3598,5 +3637,171 @@ function bootWaitLink(){
 })();
 </script>
 
+<script id="plog-v1">
+/* ══ 생산일지 «원자재 사용현황» 공용 모듈 (PLOG v1) ══
+   자료: 매출분석 로그인 서버 rawuse.gs(ruGet) — 원자재 사용현황 홈페이지(material)와 같은 시트
+   - 같은 주소(useran-coder.github.io)의 페이지끼리 localStorage «prodLogC1» 로 받아 둔 자료를 함께 씀
+   - 원자재 사용현황 페이지가 받아 둔 «ruCacheV1» 이 있으면 그것부터 바로 씀
+   - forRaw(강종,두께,폭) : 그 원자재를 실제로 쓴 제품 / forProd(품번) : 그 제품이 실제로 쓴 원자재 */
+(function(){
+'use strict';
+if(window.PLOG)return;
+var LS='prodLogC1';
+var P={ver:'plog-v1',rev:'',at:0,rows:[],months:[],R:null,PR:null,busy:false,last:0,noSrv:false,err:'',subs:[],opt:null};
+window.PLOG=P;
+function nrm(h){return String(h||'').replace(/\s+/g,'').replace(/\(.*?\)/g,'');}
+function num(x){ if(typeof x==='number')return isFinite(x)?x:0; var t=String(x==null?'':x).replace(/[,\s%원]/g,''); if(!t||t==='-')return 0; var v=parseFloat(t); return isFinite(v)?v:0; }
+function ymOf(x){ var m=/(\d{4})[-.\/](\d{1,2})/.exec(String(x||'')); return m?(m[1]+'-'+('0'+m[2]).slice(-2)):''; }
+function lsGet(k){ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(_e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); return true; }catch(_e){ return false; } }
+/* 강종 → 앞부분 (EGI-C → EGI, STS304-C 2B → STS304, SUS304 → STS304) */
+function gk(g){ var s=String(g||'').toUpperCase().replace(/\s+/g,'').split('-')[0].replace(/\(.*$/,''); return s.replace(/^SUS/,'STS'); }
+function gradeHit(a,b){ a=gk(a); b=gk(b); if(!a||!b)return true; if(a===b)return true;
+  var L=a.length>b.length?a:b, S=a.length>b.length?b:a; return L.indexOf(S)===0&&/^\d/.test(L.slice(S.length)); }
+/* 품번 맞추기: BHIA00001_G(260610) → BHIA1, DLIAP0004 → DLIAP4. TB_A1_02 · IN_A2_01 처럼 밑줄이 품번의 일부인 것은 그대로 */
+function nk(c){ c=String(c||'').toUpperCase().replace(/\s+/g,''); var m=/^([A-Z]+)(\d+)(?:_[A-Z0-9]{0,3})?(?:\(.*\))?$/.exec(c); return m?m[1]+(+m[2]):c.replace(/\(.*$/,''); }
+function tw(t,w){ return (+t)+'x'+(+w); }
+P.gk=gk; P.nk=nk; P.gradeHit=gradeHit;
+P.compact=function(head,rows){
+  var H=(head||[]).map(nrm);
+  var all=function(n){var a=[];H.forEach(function(h,i){if(h===n)a.push(i);});return a;};
+  var one=function(n){return H.indexOf(n);};
+  var st=function(n){for(var i=0;i<H.length;i++)if(H[i].indexOf(n)===0)return i;return -1;};
+  var g=all('강종'),t=all('두께'),w=all('폭');
+  var I={d:one('사용일자'),code:one('품번'),name:one('품명'),spec:one('규격'),bg:g[0],mg:g[g.length-1],bt:t[0],mt:t[t.length-1],bw:w[0],mw:w[w.length-1],
+    prod:st('생산수량'),used:st('사용중량'),lot:st('원자재Lot')};
+  if(!(I.d>=0&&I.code>=0&&I.used>=0))throw new Error('생산일지 머리글(사용일자·품번·사용중량)을 찾지 못했습니다.');
+  var gv=function(r,i){return (i>=0&&i<r.length)?r[i]:'';};
+  var out=[];
+  (rows||[]).forEach(function(r){
+    var ym=ymOf(gv(r,I.d)); if(!ym)return;
+    var code=String(gv(r,I.code)||'').trim(), name=String(gv(r,I.name)||'').trim(); if(!code&&!name)return;
+    var gr=String(gv(r,I.mg)||gv(r,I.bg)||'').trim().toUpperCase().replace(/\s+/g,''), tt=num(gv(r,I.mt))||num(gv(r,I.bt)), ww=num(gv(r,I.mw))||num(gv(r,I.bw));
+    if(!gr||!(tt>0)||!(ww>0))return;
+    out.push([ym,code,name,String(gv(r,I.spec)||'').trim(),gr,tt,ww,num(gv(r,I.used)),num(gv(r,I.prod)),String(gv(r,I.lot)||'').trim()]);
+  });
+  return out;
+};
+function build(){
+  var R={}, PR={}, months={};
+  P.rows.forEach(function(r){
+    var k=tw(r[5],r[6]), g=gk(r[4]);
+    var x=R[k]||(R[k]={}), G=x[g]||(x[g]={grade:g,t:r[5],w:r[6],used:0,prod:0,n:0,last:'',byYm:{},prods:{}});
+    G.used+=r[7]; G.prod+=r[8]; G.n++; if(r[0]>G.last)G.last=r[0]; G.byYm[r[0]]=(G.byYm[r[0]]||0)+r[7];
+    var pk=r[1]?nk(r[1]):('('+r[2]+')'), p=G.prods[pk]||(G.prods[pk]={code:r[1],name:r[2],spec:r[3],used:0,prod:0,n:0,last:'',byYm:{},qYm:{}});
+    p.used+=r[7]; p.prod+=r[8]; p.n++; if(r[0]>p.last){ p.last=r[0]; if(r[2])p.name=r[2]; if(r[3])p.spec=r[3]; }
+    p.byYm[r[0]]=(p.byYm[r[0]]||0)+r[7]; p.qYm[r[0]]=(p.qYm[r[0]]||0)+r[8];
+    var q=PR[pk]||(PR[pk]={code:r[1],name:r[2],spec:r[3],used:0,prod:0,n:0,last:'',raws:{}});
+    q.used+=r[7]; q.prod+=r[8]; q.n++; if(r[0]>q.last){ q.last=r[0]; if(r[2])q.name=r[2]; if(r[3])q.spec=r[3]; }
+    var rk=g+'|'+k, m=q.raws[rk]||(q.raws[rk]={grade:g,t:r[5],w:r[6],used:0,prod:0,n:0,last:'',byYm:{}});
+    m.used+=r[7]; m.prod+=r[8]; m.n++; if(r[0]>m.last)m.last=r[0]; m.byYm[r[0]]=(m.byYm[r[0]]||0)+r[7];
+    months[r[0]]=1;
+  });
+  P.R=R; P.PR=PR; P.months=Object.keys(months).sort();
+}
+function list(o){ return Object.keys(o).map(function(k){ return o[k]; }); }
+P.ok=function(){ return !!(P.R&&P.rows.length); };
+/* 원자재(강종·두께·폭) → 실제로 쓴 제품 묶음. grade 가 비면 강종 상관없이 */
+P.forRaw=function(grade,t,w){
+  if(!P.R||!(+t>0)||!(+w>0))return null;
+  var x=P.R[tw(t,w)]; if(!x)return null;
+  var hit=null;
+  Object.keys(x).forEach(function(g){ if(grade&&!gradeHit(grade,g))return; var G=x[g];
+    if(!hit)hit={grades:[],t:+t,w:+w,used:0,prod:0,n:0,last:'',byYm:{},prods:{}};
+    hit.grades.push(g); hit.used+=G.used; hit.prod+=G.prod; hit.n+=G.n; if(G.last>hit.last)hit.last=G.last;
+    Object.keys(G.byYm).forEach(function(m){ hit.byYm[m]=(hit.byYm[m]||0)+G.byYm[m]; });
+    Object.keys(G.prods).forEach(function(pk){ var p=G.prods[pk], q=hit.prods[pk];
+      if(!q)q=hit.prods[pk]={code:p.code,name:p.name,spec:p.spec,used:0,prod:0,n:0,last:'',byYm:{},qYm:{}};
+      q.used+=p.used; q.prod+=p.prod; q.n+=p.n; if(p.last>q.last)q.last=p.last;
+      Object.keys(p.byYm).forEach(function(m){ q.byYm[m]=(q.byYm[m]||0)+p.byYm[m]; q.qYm[m]=(q.qYm[m]||0)+(p.qYm[m]||0); }); });
+  });
+  if(hit){ hit.list=list(hit.prods).sort(function(a,b){ return b.used-a.used; }); hit.grade=hit.grades.join('/'); }
+  return hit;
+};
+/* 원자재 이름·규격 글자에서 강종·두께·폭 찾기 (EGI-C 1.6x61, PO 3.0*155*C, EGI 1.6T X 66 …) */
+P.parseRaw=function(){
+  var s=Array.prototype.slice.call(arguments).map(function(v){ return String(v==null?'':v); }).join(' ').toUpperCase();
+  var gm=/(?:^|[^A-Z])(STS\s*\d{3}|SUS\s*\d{3}|SGCC|SECC|SPCC|SPHC|SGLCC|HGI|EGI|GA|GI|PO|CR|HR)(?=$|[^A-Z])/.exec(s);
+  var s2=s.replace(/[×＊*Ｘ]/g,'X').replace(/\s+/g,'');
+  var m=/(\d+(?:\.\d+)?)T?X(\d+(?:\.\d+)?)/.exec(s2);
+  if(!m)return null; var t=parseFloat(m[1]), w=parseFloat(m[2]);
+  if(!(t>0&&t<=12&&w>=5&&w<=2600))return null;
+  return {grade:gm?gm[1].replace(/\s+/g,''):'',t:t,w:w};
+};
+/* 품번 → 그 제품이 실제로 쓴 원자재 */
+P.forProd=function(code){ if(!P.PR)return null; var q=P.PR[nk(code)]; if(!q)return null;
+  var o={code:q.code,name:q.name,spec:q.spec,used:q.used,prod:q.prod,n:q.n,last:q.last,raws:list(q.raws).sort(function(a,b){ return b.used-a.used; })}; return o; };
+/* 원자재 검색용 목록 (강종 두께x폭) */
+P.rawList=function(){ if(!P.R)return []; var a=[]; Object.keys(P.R).forEach(function(k){ var x=P.R[k]; Object.keys(x).forEach(function(g){ var G=x[g]; a.push({grade:g,t:G.t,w:G.w,used:G.used,prod:G.prod,n:G.n,last:G.last,nProd:Object.keys(G.prods).length,label:g+' '+G.t+'x'+G.w}); }); });
+  return a.sort(function(a,b){ return b.used-a.used; }); };
+P.prodList=function(){ return P.PR?list(P.PR):[]; };
+/* 최근 n개월(진행 중인 이번 달 제외) 월평균 */
+P.recentMonths=function(n){ var now=new Date(), cur=now.getFullYear()+'-'+('0'+(now.getMonth()+1)).slice(-2);
+  var a=P.months.filter(function(m){ return m<cur; }); if(!a.length)a=P.months.slice(); return a.slice(-(n||12)); };
+P.avg=function(byYm,n){ var ms=P.recentMonths(n||12); if(!ms.length)return 0; var s=0; ms.forEach(function(m){ s+=(byYm&&byYm[m])||0; }); return s/ms.length; };
+P.kg=function(v){ try{ return Math.round(v).toLocaleString('ko-KR'); }catch(_e){ return String(Math.round(v)); } };
+P.note=function(){
+  if(P.ok()){ var d=new Date(P.at||Date.now()), hm=(d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+    return '생산일지 «원자재 사용현황» '+(P.months[0]||'').replace('-','.')+'~'+(P.months[P.months.length-1]||'').replace('-','.')+' · '+P.rows.length.toLocaleString('ko-KR')+'줄 · '+hm+' 확인'; }
+  if(P.noSrv)return '생산일지: 서버에 원자재 사용현황 기능(rawuse.gs)이 없음';
+  if(P.err)return '생산일지: 받지 못함 — '+P.err;
+  return '생산일지: 불러오는 중…';
+};
+P.on=function(fn){ P.subs.push(fn); };
+function fire(){ P.subs.forEach(function(fn){ try{ fn(P); }catch(_e){} }); }
+function setRows(rev,at,rows){ P.rev=rev||''; P.at=at||Date.now(); P.rows=rows||[]; build(); }
+/* 받아 둔 자료 먼저 (이 페이지 · 원자재 사용현황 페이지) */
+function seed(){
+  var c=lsGet(LS);
+  if(c&&c.rows&&c.rows.length){ setRows(c.rev,c.at,c.rows); return true; }
+  var m=lsGet('ruCacheV1');
+  if(m&&m.head&&m.rows&&m.rows.length){ try{ var rows=P.compact(m.head,m.rows); if(rows.length){ setRows(m.rev,Date.now()-3600000,rows); return true; } }catch(_e){} }
+  return false;
+}
+P.sync=function(){
+  var o=P.opt; if(!o||P.busy)return Promise.resolve(false);
+  if(o.ready&&!o.ready())return Promise.resolve(false);
+  P.busy=true; P.last=Date.now();
+  /* 다른 페이지가 더 새로 받아 둔 게 있으면 그것부터 */
+  var c=lsGet(LS); if(c&&c.rows&&c.rows.length&&c.rev&&c.rev!==P.rev&&(c.at||0)>(P.at||0)){ setRows(c.rev,c.at,c.rows); fire(); }
+  return Promise.resolve().then(function(){ return o.call({action:'ruGet',rev:P.ok()?P.rev:''}); }).then(function(d){
+    if(!d||!d.ru){ P.noSrv=true; return false; }
+    if(d.ok===false)throw new Error(d.error||'서버 오류');
+    P.noSrv=false; P.err='';
+    if(d.unchanged){ P.at=Date.now(); var c2=lsGet(LS); if(c2&&c2.rev===P.rev){ c2.at=P.at; lsSet(LS,c2); } fire(); return false; }
+    var rows=P.compact(d.head,d.rows); setRows(d.rev,Date.now(),rows);
+    lsSet(LS,{rev:P.rev,at:P.at,rows:rows});
+    fire(); return true;
+  }).catch(function(e){
+    var m=String(e&&e.message||e);
+    if(/unknown|알 ?수 ?없는|지원하지|없는 ?action|invalid action/i.test(m))P.noSrv=true; else P.err=m.slice(0,80);
+    return false;
+  }).then(function(r){ P.busy=false; return r; });
+};
+/* opt: {call(payload)→Promise<응답>, ready()→로그인 여부, gap: 확인 간격(ms, 기본 10분)} */
+P.init=function(opt){
+  if(P.opt)return; P.opt=opt||{};
+  if(seed())setTimeout(fire,0);
+  setInterval(function(){
+    try{
+      if(document.visibilityState!=='visible')return;
+      if(P.opt.ready&&!P.opt.ready())return;
+      var gap=Date.now()-P.last, need=(typeof P.opt.gap==='function'?P.opt.gap():P.opt.gap)||600000;
+      if(P.noSrv&&gap<30*60000)return;
+      if(!P.last||gap>need)P.sync();
+    }catch(_e){}
+  },5000);
+  window.addEventListener('storage',function(e){ if(e.key===LS){ var c=lsGet(LS); if(c&&c.rows&&c.rev!==P.rev){ setRows(c.rev,c.at,c.rows); fire(); } } });
+};
+})();
+</script>
+<script id="plog-coil-v93">
+/* v93 : 생산일지 «원자재 사용현황» 받기 — 로그인 서버 ruGet. 상세 패널을 보고 있으면 1분, 아니면 10분마다 변경 확인 */
+(function(){
+  if(!window.PLOG)return;
+  PLOG.init({call:p=>auCall(p,90000),ready:()=>auValid(),gap:()=>{const d=document.getElementById('drawer');return d&&d.classList.contains('on')?60000:600000;}});
+  PLOG.on(()=>{try{window.__coilPlogRefresh&&window.__coilPlogRefresh();}catch(e){}});
+})();
+</script>
 </body>
 </html>
