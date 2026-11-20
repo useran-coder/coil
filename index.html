@@ -3029,7 +3029,7 @@ applyMode();if(C.get().mode==="plate")renderAll();
      (json 은 문자열 → 서버의 «합치기 저장»에서도 통째로 바뀌어 지운 항목이 되살아나지 않음)
    - 같은 아이디로 로그인한 모든 PC 가 같은 작업 내용을 봄(마지막 저장 기준)
    ═══════════════════════════════════════════════════════════ */
-var COIL_VER='v93';
+var COIL_VER='v94';
 var AU_URL_DEFAULT='https://script.google.com/macros/s/AKfycbxSlND4ZKOpxISNQMRdV2d-LA5YxXS1BDe0k2TXKq6g7Tfm6PZ1Rse3mp0Nm4ndZXZdiQ/exec';
 var AU_KEY_DEFAULT='';   /* 비밀키는 공개 저장소에 넣지 않음 — 같은 브라우저의 매출분석·견적기 설정에서 찾거나, 처음 한 번 입력 */
 var AU_ROLE={admin:'관리자',uploader:'업로더',user:'일반'}, AU_MGR_NAMES=['안재학'];
@@ -3079,10 +3079,12 @@ async function auCall0(payload,timeoutMs){
   if(d&&d.error){const er=new Error(d.error);er.retry=!!d.retryable;er.retryMs=+d.retryAfterMs||1500;er.auth=!!d.authError||/세션\s*만료|로그인이\s*필요|토큰|unauthorized|expired/i.test(d.error);throw er;}
   return d;
 }
+/* v94 : 로그인 응답에 비밀키(skey)가 오면 이 PC에 저장 → 다음부터 평소처럼 비밀키 사용 */
+function auSaveSkey(d){try{const k=d&&d.skey&&String(d.skey).trim();if(k&&k!==auKey())localStorage.setItem('dpt_auth_key',k);}catch(e){}}
 async function auTryAuto(){
   const a=auLsGet('dpt_auth_auto_v1'); if(!a||!a.id)return false;
   const pw=auUnmask(a.p); if(!pw)return false;
-  try{const d=await auCall({action:'auLogin',id:a.id,pw});if(!d||!d.token||!d.user)return false;
+  try{const d=await auCall({action:'auLogin',id:a.id,pw});if(!d||!d.token||!d.user)return false;auSaveSkey(d);
     AU.token=d.token;AU.id=d.user.id;AU.name=d.user.name;AU.role=d.user.role;AU.exp=d.exp;auPersist();return true;}catch(e){return false;}
 }
 function auEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -3111,8 +3113,7 @@ function auShowGate(){
   const a=auLsGet('dpt_auth_auto_v1'); if(a&&a.id){$g('auId').value=a.id;$g('auAuto').checked=true;}
   else if(AU.id)$g('auId').value=AU.id;
   setTimeout(()=>{($g('auId').value?$g('auPw'):$g('auId')).focus();},60);
-  auDiscoverKey().then(ok=>{if(!ok&&$g('auSrvBox')){$g('auSrvBox').style.display='';$g('auSrvUrl').value=auUrl();$g('auSrvKey').value='';
-    msg.style.color='var(--warn)';msg.innerHTML='이 PC에서 처음 사용함. 같은 PC·같은 브라우저에서 <b>가공비 견적기</b>나 <b>매출분석도구</b>를 한 번 열면 비밀키가 자동 설정됨 (열고 이 화면으로 돌아오면 자동 확인).<div class="au-kl"><a href="https://useran-coder.github.io/cost/" target="_blank" rel="noopener">가공비 견적기 열기 ↗</a><a href="https://useran-coder.github.io/sales/" target="_blank" rel="noopener">매출분석도구 열기 ↗</a></div>또는 아래 «비밀키»에 직접 입력 후 [저장].';watchKey();}});
+  auDiscoverKey().then(ok=>{if(!ok&&$g('auSrvBox')&&!msg.textContent){msg.style.color='var(--muted)';msg.textContent='이 PC에서 처음 사용함 · 아이디·비밀번호로 로그인하면 서버 연결 자동 설정됨';}});   /* v94 : 비밀키 없이도 로그인 가능 */
   /* v86 : 다른 탭에서 견적기·매출분석을 열어 키가 생기면 바로 알아챔 */
   function keyFound(){if(!document.getElementById('auSrvBox'))return;$g('auSrvBox').style.display='none';msg.style.color='var(--ok)';msg.textContent='비밀키를 찾음. 로그인해 주세요.';}
   function watchKey(){addEventListener('storage',e=>{if((e.key==='dpt_auth_key'||e.key==='dpt_sync_key')&&auKey())keyFound();});
@@ -3127,11 +3128,13 @@ function auShowGate(){
     ev.preventDefault();
     const id=$g('auId').value.trim(),pw=$g('auPw').value;
     if(!id||!pw){msg.style.color='var(--bad)';msg.textContent='아이디와 비밀번호를 입력하세요.';return;}
-    if(!auKey()){const k=$g('auSrvKey')&&$g('auSrvKey').value.trim();if(k){try{localStorage.setItem('dpt_auth_key',k);}catch(e){}}else{msg.style.color='var(--bad)';msg.innerHTML='서버 비밀키가 없음. '+'같은 PC·같은 브라우저에서 <b>가공비 견적기</b>나 <b>매출분석도구</b>를 한 번 열면 비밀키가 자동 설정됨 (열고 이 화면으로 돌아오면 자동 확인).<div class="au-kl"><a href="https://useran-coder.github.io/cost/" target="_blank" rel="noopener">가공비 견적기 열기 ↗</a><a href="https://useran-coder.github.io/sales/" target="_blank" rel="noopener">매출분석도구 열기 ↗</a></div>또는 아래 «비밀키»에 직접 입력 후 [저장].';$g('auSrvBox').style.display='';return;}}
+    if(!auKey()){const k=$g('auSrvKey')&&$g('auSrvKey').value.trim();if(k){try{localStorage.setItem('dpt_auth_key',k);}catch(e){}}}   /* v94 : 비밀키가 없어도 로그인 시도 — 서버(Code v27)가 아이디·비밀번호 확인 후 비밀키를 돌려줌 */
     const btn=$g('auBtn');btn.disabled=true;btn.textContent='확인 중…';msg.textContent='';
     try{
-      const d=await auCall({action:'auLogin',id,pw});
+      const noKey=!auKey(); let d;
+      try{d=await auCall({action:'auLogin',id,pw});}catch(e){if(noKey&&/비밀키/.test(String(e.message||e)))throw new Error((e.message||e)+' · 이 PC에 서버 비밀키가 없음. 가공비 견적기나 매출분석도구를 이 브라우저에서 한 번 열거나 «⚙ 서버 주소 설정»에 비밀키 입력');throw e;}
       if(!d||!d.token||!d.user)throw new Error('서버가 로그인 요청을 처리하지 못함.');
+      auSaveSkey(d);
       AU.token=d.token;AU.id=d.user.id;AU.name=d.user.name;AU.role=d.user.role;AU.exp=d.exp;
       auPersist($g('auKeep').checked);
       auLsSet('dpt_auth_auto_v1',$g('auAuto').checked?{id,p:auMask(pw)}:null);
